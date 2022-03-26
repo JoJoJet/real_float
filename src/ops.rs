@@ -82,4 +82,57 @@ macro_rules! impl_ops {
         $(impl_ops!($f);)*
     }
 }
+
+#[cfg(not(feature = "num_traits"))]
 impl_ops!(f32, f64);
+
+#[cfg(feature = "num_traits")]
+mod impl_num_traits {
+    use super::*;
+    use num_traits::Float;
+
+    impl<F: Float> IsNan for F {
+        #[inline]
+        fn is_nan(self) -> bool {
+            <F as Float>::is_nan(self)
+        }
+    }
+    impl<F: Float> Pow for F {
+        #[inline]
+        fn powf(self, n: Self) -> Self {
+            <F as Float>::powf(self, n)
+        }
+        #[inline]
+        fn powi(self, n: i32) -> Self {
+            <F as Float>::powi(self, n)
+        }
+    }
+    impl<F: Float> Root for F {
+        #[inline]
+        fn sqrt(self) -> Self {
+            <F as Float>::sqrt(self)
+        }
+        #[inline]
+        fn cbrt(self) -> Self {
+            <F as Float>::cbrt(self)
+        }
+    }
+    impl<F: Float> Log for F {
+        #[inline]
+        fn log(self, b: Self) -> Self {
+            <F as Float>::log(self, b)
+        }
+        #[inline]
+        fn ln(self) -> Self {
+            <F as Float>::ln(self)
+        }
+        #[inline]
+        fn log2(self) -> Self {
+            <F as Float>::log2(self)
+        }
+        #[inline]
+        fn log10(self) -> Self {
+            <F as Float>::log10(self)
+        }
+    }
+}
