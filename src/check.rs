@@ -1,6 +1,6 @@
 use std::{fmt, marker::PhantomData};
 
-use crate::{unwrap_display, IntoInner, ToOrd};
+use crate::{unwrap_display, ToOrd};
 
 /// whether or not to panic on NaN.
 pub(crate) const STRICT: bool = cfg!(any(debug_assertions, feature = "strict"));
@@ -38,13 +38,6 @@ impl<F: Copy, C: Check<F>> Checked<F, C> {
     }
 }
 
-impl<F, C: Check<F>> IntoInner<F> for Checked<F, C> {
-    #[inline]
-    fn into_inner(self) -> F {
-        self.0
-    }
-}
-
 impl<F: fmt::Debug, C: Check<F>> fmt::Debug for Checked<F, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(&self.0, f)
@@ -76,10 +69,16 @@ impl<F: Default, C: Check<F>> Default for Checked<F, C> {
 }
 
 use std::cmp::{Eq, PartialEq};
-impl<F: ToOrd, C: Check<F>, Rhs: IntoInner<F> + Copy> PartialEq<Rhs> for Checked<F, C> {
-    fn eq(&self, rhs: &Rhs) -> bool {
-        let rhs: F = (*rhs).into_inner();
-        self.0.total_eq(rhs)
+impl<F: ToOrd, C: Check<F>> PartialEq<F> for Checked<F, C> {
+    fn eq(&self, rhs: &F) -> bool {
+        // we can ignore the case where `rhs` is NaN since
+        // we know that `self` is not NaN.
+        self.0.total_eq(*rhs)
+    }
+}
+impl<F: ToOrd, C: Check<F>> PartialEq for Checked<F, C> {
+    fn eq(&self, rhs: &Self) -> bool {
+        self.0.total_eq(rhs.0)
     }
 }
 impl<F: ToOrd, C: Check<F>> Eq for Checked<F, C> {}
@@ -107,18 +106,18 @@ impl<F: ToOrd, C: Check<F>> Ord for Checked<F, C> {
 
 use std::ops::{Add, Neg, Sub};
 impl<F: Copy, C: Check<F>> Checked<F, C> {
-    pub fn try_add(self, rhs: impl IntoInner<F>) -> Result<Self, C::Error>
+    pub fn try_add(self, rhs: F) -> Result<Self, C::Error>
     where
         F: Add<Output = F>,
     {
-        let output = self.0 + rhs.into_inner();
+        let output = self.0 + rhs;
         Self::try_new(output)
     }
-    pub fn try_sub(self, rhs: impl IntoInner<F>) -> Result<Self, C::Error>
+    pub fn try_sub(self, rhs: F) -> Result<Self, C::Error>
     where
         F: Sub<Output = F>,
     {
-        let output = self.0 - rhs.into_inner();
+        let output = self.0 - rhs;
         Self::try_new(output)
     }
     pub fn try_neg(self) -> Result<Self, C::Error>
@@ -129,11 +128,10 @@ impl<F: Copy, C: Check<F>> Checked<F, C> {
         Self::try_new(output)
     }
 }
-impl<F: Add<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Add<Rhs> for Checked<F, C> {
+impl<F: Add<Output = F> + Copy, C: Check<F>> Add<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
-    fn add(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.into_inner();
+    fn add(self, rhs: F) -> Self::Output {
         if STRICT {
             unwrap_display(self.try_add(rhs))
         } else {
@@ -141,11 +139,10 @@ impl<F: Add<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Add<Rhs> for Che
         }
     }
 }
-impl<F: Sub<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Sub<Rhs> for Checked<F, C> {
+impl<F: Sub<Output = F> + Copy, C: Check<F>> Sub<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
-    fn sub(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.into_inner();
+    fn sub(self, rhs: F) -> Self::Output {
         if STRICT {
             unwrap_display(self.try_sub(rhs))
         } else {
@@ -167,33 +164,32 @@ impl<F: Neg<Output = F> + Copy, C: Check<F>> Neg for Checked<F, C> {
 
 use std::ops::{Div, Mul, Rem};
 impl<F: Copy, C: Check<F>> Checked<F, C> {
-    pub fn try_mul(self, rhs: impl IntoInner<F>) -> Result<Self, C::Error>
+    pub fn try_mul(self, rhs: F) -> Result<Self, C::Error>
     where
         F: Mul<Output = F>,
     {
-        let output = self.0 * rhs.into_inner();
+        let output = self.0 * rhs;
         Self::try_new(output)
     }
-    pub fn try_div(self, rhs: impl IntoInner<F>) -> Result<Self, C::Error>
+    pub fn try_div(self, rhs: F) -> Result<Self, C::Error>
     where
         F: Div<Output = F>,
     {
-        let output = self.0 / rhs.into_inner();
+        let output = self.0 / rhs;
         Self::try_new(output)
     }
-    pub fn try_rem(self, rhs: impl IntoInner<F>) -> Result<Self, C::Error>
+    pub fn try_rem(self, rhs: F) -> Result<Self, C::Error>
     where
         F: Rem<Output = F>,
     {
-        let output = self.0 % rhs.into_inner();
+        let output = self.0 % rhs;
         Self::try_new(output)
     }
 }
-impl<F: Mul<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Mul<Rhs> for Checked<F, C> {
+impl<F: Mul<Output = F> + Copy, C: Check<F>> Mul<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
-    fn mul(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.into_inner();
+    fn mul(self, rhs: F) -> Self::Output {
         if STRICT {
             unwrap_display(self.try_mul(rhs))
         } else {
@@ -201,11 +197,10 @@ impl<F: Mul<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Mul<Rhs> for Che
         }
     }
 }
-impl<F: Div<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Div<Rhs> for Checked<F, C> {
+impl<F: Div<Output = F> + Copy, C: Check<F>> Div<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
-    fn div(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.into_inner();
+    fn div(self, rhs: F) -> Self::Output {
         if STRICT {
             unwrap_display(self.try_div(rhs))
         } else {
@@ -213,11 +208,10 @@ impl<F: Div<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Div<Rhs> for Che
         }
     }
 }
-impl<F: Rem<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Rem<Rhs> for Checked<F, C> {
+impl<F: Rem<Output = F> + Copy, C: Check<F>> Rem<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
-    fn rem(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.into_inner();
+    fn rem(self, rhs: F) -> Self::Output {
         if STRICT {
             unwrap_display(self.try_rem(rhs))
         } else {
@@ -228,8 +222,8 @@ impl<F: Rem<Output = F> + Copy, C: Check<F>, Rhs: IntoInner<F>> Rem<Rhs> for Che
 
 use crate::Pow;
 impl<F: Copy + Pow, C: Check<F>> Checked<F, C> {
-    pub fn try_powf(self, n: impl IntoInner<F>) -> Result<Self, C::Error> {
-        let output = self.0.powf(n.into_inner());
+    pub fn try_powf(self, n: F) -> Result<Self, C::Error> {
+        let output = self.0.powf(n);
         Self::try_new(output)
     }
     pub fn try_powi(self, n: i32) -> Result<Self, C::Error> {
@@ -237,8 +231,7 @@ impl<F: Copy + Pow, C: Check<F>> Checked<F, C> {
         Self::try_new(output)
     }
     #[track_caller]
-    pub fn powf(self, n: impl IntoInner<F>) -> Self {
-        let n = n.into_inner();
+    pub fn powf(self, n: F) -> Self {
         if STRICT {
             unwrap_display(self.try_powf(n))
         } else {
@@ -285,8 +278,8 @@ impl<F: Copy + Root, C: Check<F>> Checked<F, C> {
 
 use crate::Log;
 impl<F: Copy + Log, C: Check<F>> Checked<F, C> {
-    pub fn try_log(self, b: impl IntoInner<F>) -> Result<Self, C::Error> {
-        let output = self.0.log(b.into_inner());
+    pub fn try_log(self, b: F) -> Result<Self, C::Error> {
+        let output = self.0.log(b);
         Self::try_new(output)
     }
     pub fn try_ln(self) -> Result<Self, C::Error> {
@@ -303,8 +296,7 @@ impl<F: Copy + Log, C: Check<F>> Checked<F, C> {
     }
 
     #[track_caller]
-    pub fn log(self, base: impl IntoInner<F>) -> Self {
-        let base = base.into_inner();
+    pub fn log(self, base: F) -> Self {
         if STRICT {
             unwrap_display(self.try_log(base))
         } else {

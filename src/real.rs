@@ -42,6 +42,7 @@ impl<F: IsNan> Real<F> {
         Checked::try_new(val).map(Self)
     }
     /// Gets the inner value of this number.
+    #[inline]
     pub fn val(self) -> F {
         self.0.val()
     }
@@ -50,7 +51,7 @@ impl<F: IsNan> Real<F> {
 impl<F: IsNan> IntoInner<F> for Real<F> {
     #[inline]
     fn into_inner(self) -> F {
-        self.0.into_inner()
+        self.val()
     }
 }
 
@@ -58,7 +59,7 @@ use crate::ToOrd;
 use std::cmp::{Eq, PartialEq};
 impl<F: IsNan + ToOrd, Rhs: IntoInner<F> + Copy> PartialEq<Rhs> for Real<F> {
     fn eq(&self, rhs: &Rhs) -> bool {
-        self.0 == *rhs
+        self.0 == (*rhs).into_inner()
     }
 }
 impl<F: IsNan + ToOrd> Eq for Real<F> {}

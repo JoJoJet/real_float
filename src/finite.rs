@@ -42,6 +42,7 @@ impl<F: IsFinite> Finite<F> {
         Checked::try_new(val).map(Self)
     }
     /// Gets the inner value of this number.
+    #[inline]
     pub fn val(self) -> F {
         self.0.val()
     }
@@ -50,7 +51,7 @@ impl<F: IsFinite> Finite<F> {
 impl<F: IsFinite> IntoInner<F> for Finite<F> {
     #[inline]
     fn into_inner(self) -> F {
-        self.0.into_inner()
+        self.val()
     }
 }
 
@@ -58,7 +59,7 @@ use crate::ToOrd;
 use std::cmp::{Eq, PartialEq};
 impl<F: IsFinite + ToOrd, Rhs: IntoInner<F> + Copy> PartialEq<Rhs> for Finite<F> {
     fn eq(&self, rhs: &Rhs) -> bool {
-        self.0 == *rhs
+        self.0 == (*rhs).into_inner()
     }
 }
 impl<F: IsFinite + ToOrd> Eq for Finite<F> {}
