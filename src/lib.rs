@@ -10,7 +10,7 @@ impl std::fmt::Display for NanError {
 /// whether or not to panic on NaN.
 const STRICT: bool = cfg!(any(debug_assertions, feature = "strict"));
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct Real<F: IsNan>(F);
 
@@ -54,6 +54,37 @@ impl<F: IsNan> IntoInner<F> for F {
     #[inline]
     fn into_inner(self) -> F {
         self
+    }
+}
+
+mod bits;
+pub use bits::*;
+
+use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
+impl<F: IsNan + ToOrd, Rhs: IntoInner<F> + Copy> PartialEq<Rhs> for Real<F> {
+    fn eq(&self, rhs: &Rhs) -> bool {
+        self.0.total_eq(rhs.into_inner())
+    }
+}
+impl<F: IsNan + ToOrd> Eq for Real<F> {}
+
+impl<F: IsNan + ToOrd> PartialOrd<F> for Real<F> {
+    fn partial_cmp(&self, rhs: &F) -> Option<Ordering> {
+        let lhs = self.0.to_ord();
+        let rhs = Self::try_new(*rhs).ok()?.0.to_ord();
+        Some(lhs.cmp(&rhs))
+    }
+}
+impl<F: IsNan + ToOrd> PartialOrd for Real<F> {
+    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+        Some(self.cmp(rhs))
+    }
+}
+impl<F: IsNan + ToOrd> Ord for Real<F> {
+    fn cmp(&self, rhs: &Self) -> Ordering {
+        let lhs = self.0.to_ord();
+        let rhs = rhs.0.to_ord();
+        lhs.cmp(&rhs)
     }
 }
 
@@ -345,5 +376,24 @@ mod tests {
         assert_eq!(real!(1.0f32).ln(), real!(0.0));
         assert_eq!(real!(8.0f32).log2(), real!(3.0));
         assert_eq!(real!(1000.0f32).log10(), real!(3.0));
+    }
+
+    #[test]
+    #[allow(clippy::bool_assert_comparison)]
+    #[allow(clippy::cmp_nan)]
+    fn assert_cmp_weird() {
+        assert!(real!(f32::NEG_INFINITY) < real!(-1.0));
+        assert!(real!(-1.0f32) < real!(0.0));
+
+        assert_eq!(real!(0.0f32), real!(0.0));
+        assert_eq!(real!(0.0f32), real!(-0.0));
+        assert_eq!(real!(-0.0f32), real!(0.0));
+        assert_eq!(real!(-0.0f32), real!(-0.0));
+
+        assert!(real!(0.0) < real!(1.0));
+        assert!(real!(1.0) < real!(f32::INFINITY));
+
+        assert_eq!(real!(1.0) < f32::NAN, false);
+        assert_eq!(real!(1.0) >= f32::NAN, false);
     }
 }
