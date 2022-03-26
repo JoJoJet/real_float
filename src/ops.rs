@@ -3,6 +3,10 @@ pub trait IsNan: Sized + Copy {
     fn is_nan(self) -> bool;
 }
 
+pub trait IsFinite: Sized + Copy {
+    fn is_finite(self) -> bool;
+}
+
 /// Trait for raising a floating point number to a power.
 pub trait Pow: Sized + Copy {
     #[must_use]
@@ -37,6 +41,12 @@ macro_rules! impl_ops {
             #[inline]
             fn is_nan(self) -> bool {
                 <$f>::is_nan(self)
+            }
+        }
+        impl IsFinite for $f {
+            #[inline]
+            fn is_finite(self) -> bool {
+                <$f>::is_finite(self)
             }
         }
         impl Pow for $f {
@@ -95,6 +105,12 @@ mod impl_num_traits {
         #[inline]
         fn is_nan(self) -> bool {
             <F as Float>::is_nan(self)
+        }
+    }
+    impl<F: Float> IsFinite for F {
+        #[inline]
+        fn is_finite(self) -> bool {
+            <F as Float>::is_finite(self)
         }
     }
     impl<F: Float> Pow for F {

@@ -25,6 +25,9 @@ mod check;
 mod real;
 pub use real::{NanError, Real};
 
+mod finite;
+pub use finite::{Finite, InfiniteError};
+
 #[track_caller]
 fn unwrap_display<T, E: std::fmt::Display>(res: Result<T, E>) -> T {
     match res {

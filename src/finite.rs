@@ -1,31 +1,31 @@
-use crate::{check::Checked, IntoInner, IsNan};
+use crate::{check::Checked, IntoInner, IsFinite};
 
-/// The error produced when NaN is encountered.
+/// The error produced when infinity or NaN is encountered.
 #[derive(Debug, Clone, Copy)]
-pub struct NanError;
-impl std::fmt::Display for NanError {
+pub struct InfiniteError;
+impl std::fmt::Display for InfiniteError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "encountered NaN unexpectedly")
+        write!(f, "encountered infinity or NaN unexpectedly")
     }
 }
 
-struct NanCheck;
-impl<F: IsNan> crate::check::Check<F> for NanCheck {
-    type Error = NanError;
-    fn check(val: F) -> Result<F, NanError> {
-        if val.is_nan() {
-            Err(NanError)
-        } else {
+struct FiniteCheck;
+impl<F: IsFinite> crate::check::Check<F> for FiniteCheck {
+    type Error = InfiniteError;
+    fn check(val: F) -> Result<F, InfiniteError> {
+        if val.is_finite() {
             Ok(val)
+        } else {
+            Err(InfiniteError)
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
-pub struct Real<F: IsNan>(Checked<F, NanCheck>);
+pub struct Finite<F: IsFinite>(Checked<F, FiniteCheck>);
 
-impl<F: IsNan> Real<F> {
+impl<F: IsFinite> Finite<F> {
     /// Creates a new [`Real`] float, panicking if it's NaN.  
     ///
     /// Note that this function will *not* panic in release mode,
@@ -36,8 +36,8 @@ impl<F: IsNan> Real<F> {
     }
     /// Attempts to create a new [`Real`] float.
     /// # Errors
-    /// If the number is NaN.
-    pub fn try_new(val: F) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_new(val: F) -> Result<Self, InfiniteError> {
         // This is not a TryFrom implementation due to [this issue](https://github.com/rust-lang/rust/issues/50133).
         Checked::try_new(val).map(Self)
     }
@@ -47,7 +47,7 @@ impl<F: IsNan> Real<F> {
     }
 }
 
-impl<F: IsNan> IntoInner<F> for Real<F> {
+impl<F: IsFinite> IntoInner<F> for Finite<F> {
     #[inline]
     fn into_inner(self) -> F {
         self.0.into_inner()
@@ -56,36 +56,36 @@ impl<F: IsNan> IntoInner<F> for Real<F> {
 
 use crate::ToOrd;
 use std::cmp::{Eq, PartialEq};
-impl<F: IsNan + ToOrd, Rhs: IntoInner<F> + Copy> PartialEq<Rhs> for Real<F> {
+impl<F: IsFinite + ToOrd, Rhs: IntoInner<F> + Copy> PartialEq<Rhs> for Finite<F> {
     fn eq(&self, rhs: &Rhs) -> bool {
         self.0 == *rhs
     }
 }
-impl<F: IsNan + ToOrd> Eq for Real<F> {}
+impl<F: IsFinite + ToOrd> Eq for Finite<F> {}
 
 use std::cmp::{Ord, Ordering, PartialOrd};
-impl<F: IsNan + ToOrd> PartialOrd<F> for Real<F> {
+impl<F: IsFinite + ToOrd> PartialOrd<F> for Finite<F> {
     fn partial_cmp(&self, rhs: &F) -> Option<Ordering> {
         self.0.partial_cmp(rhs)
     }
 }
-impl<F: IsNan + ToOrd> PartialOrd for Real<F> {
+impl<F: IsFinite + ToOrd> PartialOrd for Finite<F> {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
         self.0.partial_cmp(&rhs.0)
     }
 }
-impl<F: IsNan + ToOrd> Ord for Real<F> {
+impl<F: IsFinite + ToOrd> Ord for Finite<F> {
     fn cmp(&self, rhs: &Self) -> Ordering {
         self.0.cmp(&rhs.0)
     }
 }
 
 use std::ops::{Add, Neg, Sub};
-impl<F: IsNan> Real<F> {
+impl<F: IsFinite> Finite<F> {
     /// Attempts to add two numbers.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_add(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
+    /// If the result is non-finite.
+    pub fn try_add(self, rhs: impl IntoInner<F>) -> Result<Self, InfiniteError>
     where
         F: Add<Output = F>,
     {
@@ -93,29 +93,29 @@ impl<F: IsNan> Real<F> {
     }
     /// Attempts to subtract two numbers.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_sub(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
+    /// If the result is non-finite.
+    pub fn try_sub(self, rhs: impl IntoInner<F>) -> Result<Self, InfiniteError>
     where
         F: Sub<Output = F>,
     {
         self.0.try_sub(rhs.into_inner()).map(Self)
     }
 }
-impl<F: Add<Output = F> + IsNan, Rhs: IntoInner<F>> Add<Rhs> for Real<F> {
+impl<F: Add<Output = F> + IsFinite, Rhs: IntoInner<F>> Add<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
     fn add(self, rhs: Rhs) -> Self::Output {
         Self(self.0 + rhs.into_inner())
     }
 }
-impl<F: Sub<Output = F> + IsNan, Rhs: IntoInner<F>> Sub<Rhs> for Real<F> {
+impl<F: Sub<Output = F> + IsFinite, Rhs: IntoInner<F>> Sub<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
     fn sub(self, rhs: Rhs) -> Self::Output {
         Self(self.0 - rhs.into_inner())
     }
 }
-impl<F: Neg<Output = F> + IsNan> Neg for Real<F> {
+impl<F: Neg<Output = F> + IsFinite> Neg for Finite<F> {
     type Output = Self;
     fn neg(self) -> Self::Output {
         Self(-self.0)
@@ -123,11 +123,11 @@ impl<F: Neg<Output = F> + IsNan> Neg for Real<F> {
 }
 
 use std::ops::{Div, Mul, Rem};
-impl<F: IsNan> Real<F> {
+impl<F: IsFinite> Finite<F> {
     /// Attempts to multiply two numbers.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_mul(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
+    /// If the result is non-finite.
+    pub fn try_mul(self, rhs: impl IntoInner<F>) -> Result<Self, InfiniteError>
     where
         F: Mul<Output = F>,
     {
@@ -135,8 +135,8 @@ impl<F: IsNan> Real<F> {
     }
     /// Attempts to divide self by another number.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_div(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
+    /// If the result is non-finite.
+    pub fn try_div(self, rhs: impl IntoInner<F>) -> Result<Self, InfiniteError>
     where
         F: Div<Output = F>,
     {
@@ -144,29 +144,29 @@ impl<F: IsNan> Real<F> {
     }
     /// Attempts to find the remainder of `self / rhs`.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_rem(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
+    /// If the result is non-finite.
+    pub fn try_rem(self, rhs: impl IntoInner<F>) -> Result<Self, InfiniteError>
     where
         F: Rem<Output = F>,
     {
         self.0.try_rem(rhs.into_inner()).map(Self)
     }
 }
-impl<F: Mul<Output = F> + IsNan, Rhs: IntoInner<F>> Mul<Rhs> for Real<F> {
+impl<F: Mul<Output = F> + IsFinite, Rhs: IntoInner<F>> Mul<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
     fn mul(self, rhs: Rhs) -> Self::Output {
         Self(self.0 * rhs.into_inner())
     }
 }
-impl<F: Div<Output = F> + IsNan, Rhs: IntoInner<F>> Div<Rhs> for Real<F> {
+impl<F: Div<Output = F> + IsFinite, Rhs: IntoInner<F>> Div<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
     fn div(self, rhs: Rhs) -> Self::Output {
         Self(self.0 / rhs.into_inner())
     }
 }
-impl<F: Rem<Output = F> + IsNan, Rhs: IntoInner<F>> Rem<Rhs> for Real<F> {
+impl<F: Rem<Output = F> + IsFinite, Rhs: IntoInner<F>> Rem<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
     fn rem(self, rhs: Rhs) -> Self::Output {
@@ -175,17 +175,17 @@ impl<F: Rem<Output = F> + IsNan, Rhs: IntoInner<F>> Rem<Rhs> for Real<F> {
 }
 
 use crate::Pow;
-impl<F: IsNan + Pow> Real<F> {
+impl<F: IsFinite + Pow> Finite<F> {
     /// Attempts to raise `self` to the power `n`.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_powf(self, n: impl IntoInner<F>) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_powf(self, n: impl IntoInner<F>) -> Result<Self, InfiniteError> {
         self.0.try_powf(n.into_inner()).map(Self)
     }
     /// Attempts to raise `self` to the power `n`.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_powi(self, n: i32) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_powi(self, n: i32) -> Result<Self, InfiniteError> {
         self.0.try_powi(n).map(Self)
     }
     #[track_caller]
@@ -201,17 +201,17 @@ impl<F: IsNan + Pow> Real<F> {
 }
 
 use crate::Root;
-impl<F: IsNan + Root> Real<F> {
+impl<F: IsFinite + Root> Finite<F> {
     /// Attempts to find the square root of a number.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_sqrt(self) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_sqrt(self) -> Result<Self, InfiniteError> {
         self.0.try_sqrt().map(Self)
     }
     /// Attempts to find the cube root of a number.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_cbrt(self) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_cbrt(self) -> Result<Self, InfiniteError> {
         self.0.try_cbrt().map(Self)
     }
     #[track_caller]
@@ -227,29 +227,29 @@ impl<F: IsNan + Root> Real<F> {
 }
 
 use crate::Log;
-impl<F: IsNan + Log> Real<F> {
+impl<F: IsFinite + Log> Finite<F> {
     /// Attempts to find the log base `b` of self.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_log(self, b: impl IntoInner<F>) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_log(self, b: impl IntoInner<F>) -> Result<Self, InfiniteError> {
         self.0.try_log(b.into_inner()).map(Self)
     }
     /// Attempts to find the natural log (base e) of self.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_ln(self) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_ln(self) -> Result<Self, InfiniteError> {
         self.0.try_ln().map(Self)
     }
     /// Attempts to find the log base 2 of self.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_log2(self) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_log2(self) -> Result<Self, InfiniteError> {
         self.0.try_log2().map(Self)
     }
     /// Attempts to find the log base 10 of self.
     /// # Errors
-    /// If the result is NaN.
-    pub fn try_log10(self) -> Result<Self, NanError> {
+    /// If the result is non-finite.
+    pub fn try_log10(self) -> Result<Self, InfiniteError> {
         self.0.try_log10().map(Self)
     }
 
@@ -281,79 +281,89 @@ mod tests {
 
     macro_rules! assert_err {
         ($e: expr) => {
-            assert!(($e).is_err())
+            assert!(($e).is_err(), "{:?}", $e)
         };
     }
 
-    macro_rules! real {
+    macro_rules! finite {
         ($f: expr) => {
-            Real::new($f)
+            Finite::new($f)
         };
     }
 
     #[test]
     #[should_panic]
     fn assert_new_nan() {
-        real!(f32::NAN);
+        finite!(f32::NAN);
     }
     #[test]
     #[should_panic]
     fn assert_new_nan2() {
-        real!(-f32::NAN);
+        finite!(-f32::NAN);
+    }
+    #[test]
+    #[should_panic]
+    fn assert_new_inf() {
+        finite!(f32::INFINITY);
+    }
+    #[test]
+    #[should_panic]
+    fn assert_new_inf2() {
+        finite!(f32::NEG_INFINITY);
     }
 
     #[test]
     fn assert_nan() {
-        assert_err!(real!(f32::INFINITY).try_add(f32::NEG_INFINITY));
-        assert_err!(real!(f32::INFINITY).try_sub(f32::INFINITY));
-        assert_err!(real!(0.0f32).try_mul(f32::INFINITY));
-        assert_err!(real!(0.0f32).try_div(0.0));
-        assert_err!(real!(f32::INFINITY).try_rem(1.0));
-        assert_err!(real!(1.0f32).try_rem(0.0));
+        assert_err!(finite!(f32::MAX).try_add(f32::MAX));
+        assert_err!(finite!(f32::MIN).try_sub(f32::MAX));
+        assert_err!(finite!(f32::MAX).try_mul(f32::MAX));
+        assert_err!(finite!(1.0f32).try_div(0.0));
+        assert_err!(finite!(1.0f32).try_div(-0.0));
+        // TODO: figure out how to get infinity out of `Rem`, if possible
+        assert_err!(finite!(1.0f32).try_rem(0.0));
 
-        assert_err!(real!(-1.0f32).try_sqrt());
+        assert_err!(finite!(1000.0f32).try_powf(1000.0)); // overflows to infinity
 
-        assert_err!(real!(-1.0f32).try_log(3.0));
-        assert_err!(real!(-1.0f32).try_ln());
-        assert_err!(real!(-1.0f32).try_log2());
-        assert_err!(real!(-1.0f32).try_log10());
+        assert_err!(finite!(-1.0f32).try_sqrt());
+
+        assert_err!(finite!(-1.0f32).try_log(3.0));
+        assert_err!(finite!(-1.0f32).try_ln());
+        assert_err!(finite!(-1.0f32).try_log2());
+        assert_err!(finite!(-1.0f32).try_log10());
     }
 
     #[test]
     fn assert_ops() {
-        assert_eq!(real!(2.0f32) + 1.0, real!(3.0));
-        assert_eq!(real!(2.0f32) - 1.0, real!(1.0));
-        assert_eq!(real!(5.0f32) * 2.0, real!(10.0));
-        assert_eq!(real!(8.0f32) / 2.0, real!(4.0));
-        assert_eq!(-real!(1.0f32), real!(-1.0));
+        assert_eq!(finite!(2.0f32) + 1.0, finite!(3.0));
+        assert_eq!(finite!(2.0f32) - 1.0, finite!(1.0));
+        assert_eq!(finite!(5.0f32) * 2.0, finite!(10.0));
+        assert_eq!(finite!(8.0f32) / 2.0, finite!(4.0));
+        assert_eq!(-finite!(1.0f32), finite!(-1.0));
 
-        assert_eq!(real!(1000.0f32).powf(1000.0), real!(f32::INFINITY));
-        assert_eq!(real!(4.0f32).powf(3.5), real!(128.0));
-        assert_eq!(real!(2.0f32).powi(8), real!(256.0));
-        assert_eq!(real!(4.0f32).sqrt(), real!(2.0));
-        assert_eq!(real!(27.0f32).cbrt(), real!(3.0));
-        assert_eq!(real!(16.0f32).log(4.0), real!(2.0));
-        assert_eq!(real!(1.0f32).ln(), real!(0.0));
-        assert_eq!(real!(8.0f32).log2(), real!(3.0));
-        assert_eq!(real!(1000.0f32).log10(), real!(3.0));
+        assert_eq!(finite!(4.0f32).powf(3.5), finite!(128.0));
+        assert_eq!(finite!(2.0f32).powi(8), finite!(256.0));
+        assert_eq!(finite!(4.0f32).sqrt(), finite!(2.0));
+        assert_eq!(finite!(27.0f32).cbrt(), finite!(3.0));
+        assert_eq!(finite!(16.0f32).log(4.0), finite!(2.0));
+        assert_eq!(finite!(1.0f32).ln(), finite!(0.0));
+        assert_eq!(finite!(8.0f32).log2(), finite!(3.0));
+        assert_eq!(finite!(1000.0f32).log10(), finite!(3.0));
     }
 
     #[test]
     #[allow(clippy::bool_assert_comparison)]
     #[allow(clippy::cmp_nan)]
     fn assert_cmp_weird() {
-        assert!(real!(f32::NEG_INFINITY) < real!(-1.0));
-        assert!(real!(-1.0f32) < real!(0.0));
+        assert!(finite!(-1.0f32) < finite!(0.0));
 
-        assert_eq!(real!(0.0f32), real!(0.0));
-        assert_eq!(real!(0.0f32), real!(-0.0));
-        assert_eq!(real!(-0.0f32), real!(0.0));
-        assert_eq!(real!(-0.0f32), real!(-0.0));
+        assert_eq!(finite!(0.0f32), finite!(0.0));
+        assert_eq!(finite!(0.0f32), finite!(-0.0));
+        assert_eq!(finite!(-0.0f32), finite!(0.0));
+        assert_eq!(finite!(-0.0f32), finite!(-0.0));
 
-        assert!(real!(0.0) < real!(1.0));
-        assert!(real!(1.0) < real!(f32::INFINITY));
+        assert!(finite!(0.0) < finite!(1.0));
 
-        assert_eq!(real!(1.0) < f32::NAN, false);
-        assert_eq!(real!(1.0) >= f32::NAN, false);
+        assert_eq!(finite!(1.0) < f32::NAN, false);
+        assert_eq!(finite!(1.0) >= f32::NAN, false);
     }
 }
