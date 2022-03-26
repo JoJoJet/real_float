@@ -1,3 +1,5 @@
+#![warn(clippy::pedantic)]
+
 /// The error produced when NaN is encountered.
 #[derive(Debug, Clone, Copy)]
 pub struct NanError;
@@ -18,6 +20,10 @@ mod ops;
 pub use ops::*;
 
 impl<F: IsNan> Real<F> {
+    /// Creates a new [`Real`] float, panicking if it's NaN.  
+    ///
+    /// Note that this function will *not* panic in release mode,
+    /// unless the `strict` feature flag is set.
     #[track_caller]
     pub fn new(val: F) -> Self {
         if STRICT {
@@ -26,6 +32,9 @@ impl<F: IsNan> Real<F> {
             Self(val)
         }
     }
+    /// Attempts to create a new [`Real`] float.
+    /// # Errors
+    /// If the number is NaN.
     pub fn try_new(val: F) -> Result<Self, NanError> {
         // This is not a TryFrom implementation due to [this issue](https://github.com/rust-lang/rust/issues/50133).
         if val.is_nan() {
@@ -90,6 +99,9 @@ impl<F: IsNan + ToOrd> Ord for Real<F> {
 
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 impl<F: IsNan> Real<F> {
+    /// Attempts to add two numbers.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_add(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
     where
         F: Add<Output = F>,
@@ -97,6 +109,9 @@ impl<F: IsNan> Real<F> {
         let output = self.0 + rhs.into_inner();
         Self::try_new(output)
     }
+    /// Attempts to subtract two numbers.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_sub(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
     where
         F: Sub<Output = F>,
@@ -104,6 +119,9 @@ impl<F: IsNan> Real<F> {
         let output = self.0 - rhs.into_inner();
         Self::try_new(output)
     }
+    /// Attempts to multiply two numbers.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_mul(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
     where
         F: Mul<Output = F>,
@@ -111,6 +129,9 @@ impl<F: IsNan> Real<F> {
         let output = self.0 * rhs.into_inner();
         Self::try_new(output)
     }
+    /// Attempts to divide self by another number.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_div(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
     where
         F: Div<Output = F>,
@@ -118,6 +139,9 @@ impl<F: IsNan> Real<F> {
         let output = self.0 / rhs.into_inner();
         Self::try_new(output)
     }
+    /// Attempts to find the remainder of `self / rhs`.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_rem(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
     where
         F: Rem<Output = F>,
@@ -195,15 +219,22 @@ impl<F: Rem<Output = F> + IsNan, Rhs: IntoInner<F>> Rem<Rhs> for Real<F> {
 }
 
 impl<F: IsNan + Pow> Real<F> {
+    /// Attempts to raise `self` to the power `n`.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_powf(self, n: impl IntoInner<F>) -> Result<Self, NanError> {
         let output = self.0.powf(n.into_inner());
         Self::try_new(output)
     }
+    /// Attempts to raise `self` to the power `n`.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_powi(self, n: i32) -> Result<Self, NanError> {
         let output = self.0.powi(n);
         Self::try_new(output)
     }
     #[track_caller]
+    #[must_use]
     pub fn powf(self, n: impl IntoInner<F>) -> Self {
         let n = n.into_inner();
         if STRICT {
@@ -213,6 +244,7 @@ impl<F: IsNan + Pow> Real<F> {
         }
     }
     #[track_caller]
+    #[must_use]
     pub fn powi(self, n: i32) -> Self {
         if STRICT {
             unwrap_display(self.try_powi(n))
@@ -223,15 +255,22 @@ impl<F: IsNan + Pow> Real<F> {
 }
 
 impl<F: IsNan + Root> Real<F> {
+    /// Attempts to find the square root of a number.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_sqrt(self) -> Result<Self, NanError> {
         let output = self.0.sqrt();
         Self::try_new(output)
     }
+    /// Attempts to find the cube root of a number.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_cbrt(self) -> Result<Self, NanError> {
         let output = self.0.cbrt();
         Self::try_new(output)
     }
     #[track_caller]
+    #[must_use]
     pub fn sqrt(self) -> Self {
         if STRICT {
             unwrap_display(self.try_sqrt())
@@ -240,6 +279,7 @@ impl<F: IsNan + Root> Real<F> {
         }
     }
     #[track_caller]
+    #[must_use]
     pub fn cbrt(self) -> Self {
         if STRICT {
             unwrap_display(self.try_cbrt())
@@ -250,24 +290,37 @@ impl<F: IsNan + Root> Real<F> {
 }
 
 impl<F: IsNan + Log> Real<F> {
-    pub fn try_log(self, rhs: impl IntoInner<F>) -> Result<Self, NanError> {
-        let output = self.0.log(rhs.into_inner());
+    /// Attempts to find the log base `b` of self.
+    /// # Errors
+    /// If the result is NaN.
+    pub fn try_log(self, b: impl IntoInner<F>) -> Result<Self, NanError> {
+        let output = self.0.log(b.into_inner());
         Self::try_new(output)
     }
+    /// Attempts to find the natural log (base e) of self.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_ln(self) -> Result<Self, NanError> {
         let output = self.0.ln();
         Self::try_new(output)
     }
+    /// Attempts to find the log base 2 of self.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_log2(self) -> Result<Self, NanError> {
         let output = self.0.log2();
         Self::try_new(output)
     }
+    /// Attempts to find the log base 10 of self.
+    /// # Errors
+    /// If the result is NaN.
     pub fn try_log10(self) -> Result<Self, NanError> {
         let output = self.0.log10();
         Self::try_new(output)
     }
 
     #[track_caller]
+    #[must_use]
     pub fn log(self, base: impl IntoInner<F>) -> Self {
         let base = base.into_inner();
         if STRICT {
@@ -277,6 +330,7 @@ impl<F: IsNan + Log> Real<F> {
         }
     }
     #[track_caller]
+    #[must_use]
     pub fn ln(self) -> Self {
         if STRICT {
             unwrap_display(self.try_ln())
@@ -285,6 +339,7 @@ impl<F: IsNan + Log> Real<F> {
         }
     }
     #[track_caller]
+    #[must_use]
     pub fn log2(self) -> Self {
         if STRICT {
             unwrap_display(self.try_log2())
@@ -293,6 +348,7 @@ impl<F: IsNan + Log> Real<F> {
         }
     }
     #[track_caller]
+    #[must_use]
     pub fn log10(self) -> Self {
         if STRICT {
             unwrap_display(self.try_log10())

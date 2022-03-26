@@ -40,8 +40,6 @@ macro_rules! impl_to_ord {
                     // Special case: if it's negative zero, pretend that it's postive zero.
                     // This ensures that -0.0 == +0.0
                     if bits << 1 == 0 {
-                        return zero();
-
                         // Bencharking shows that marking as cold provides a slight performance boost,
                         // probably because it aids branch prediction.
                         // This would be even better we if we had an `unlikely` intrinsic, as the special
@@ -50,6 +48,8 @@ macro_rules! impl_to_ord {
                         fn zero() -> $u {
                             MSB // this is the result of flipping the most significant bit of +0.0
                         }
+
+                        zero()
                     }
                     // If it's any other negative number, flip every bit.
                     else {

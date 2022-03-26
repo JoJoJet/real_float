@@ -5,21 +5,29 @@ pub trait IsNan: Sized + Copy {
 
 /// Trait for raising a floating point number to a power.
 pub trait Pow: Sized + Copy {
+    #[must_use]
     fn powf(self, n: Self) -> Self;
+    #[must_use]
     fn powi(self, n: i32) -> Self;
 }
 
 /// Trait for taking roots of a floating point number.
 pub trait Root: Sized + Copy {
+    #[must_use]
     fn sqrt(self) -> Self;
+    #[must_use]
     fn cbrt(self) -> Self;
 }
 
-/// Trait for finding the logarithms of a floating point number.
+/// Trait for finding logarithms of a floating point number.
 pub trait Log: Sized + Copy {
+    #[must_use]
     fn log(self, base: Self) -> Self;
+    #[must_use]
     fn ln(self) -> Self;
+    #[must_use]
     fn log2(self) -> Self;
+    #[must_use]
     fn log10(self) -> Self;
 }
 
