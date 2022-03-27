@@ -104,7 +104,7 @@ impl<F: ToOrd, C: Check<F>> Ord for Checked<F, C> {
     }
 }
 
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 impl<F: Copy, C: Check<F>> Checked<F, C> {
     pub fn try_add(self, rhs: F) -> Result<Self, C::Error>
     where
@@ -139,6 +139,15 @@ impl<F: Add<Output = F> + Copy, C: Check<F>> Add<F> for Checked<F, C> {
         }
     }
 }
+impl<F: AddAssign + Copy, C: Check<F>> AddAssign<F> for Checked<F, C> {
+    #[track_caller]
+    fn add_assign(&mut self, rhs: F) {
+        self.0 += rhs;
+        if STRICT {
+            unwrap_display(C::check(self.0));
+        }
+    }
+}
 impl<F: Sub<Output = F> + Copy, C: Check<F>> Sub<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
@@ -147,6 +156,15 @@ impl<F: Sub<Output = F> + Copy, C: Check<F>> Sub<F> for Checked<F, C> {
             unwrap_display(self.try_sub(rhs))
         } else {
             checked!(self.0 - rhs)
+        }
+    }
+}
+impl<F: SubAssign + Copy, C: Check<F>> SubAssign<F> for Checked<F, C> {
+    #[track_caller]
+    fn sub_assign(&mut self, rhs: F) {
+        self.0 -= rhs;
+        if STRICT {
+            unwrap_display(C::check(self.0));
         }
     }
 }
@@ -162,7 +180,7 @@ impl<F: Neg<Output = F> + Copy, C: Check<F>> Neg for Checked<F, C> {
     }
 }
 
-use std::ops::{Div, Mul, Rem};
+use std::ops::{Div, DivAssign, Mul, MulAssign, Rem, RemAssign};
 impl<F: Copy, C: Check<F>> Checked<F, C> {
     pub fn try_mul(self, rhs: F) -> Result<Self, C::Error>
     where
@@ -197,6 +215,15 @@ impl<F: Mul<Output = F> + Copy, C: Check<F>> Mul<F> for Checked<F, C> {
         }
     }
 }
+impl<F: MulAssign + Copy, C: Check<F>> MulAssign<F> for Checked<F, C> {
+    #[track_caller]
+    fn mul_assign(&mut self, rhs: F) {
+        self.0 *= rhs;
+        if STRICT {
+            unwrap_display(C::check(self.0));
+        }
+    }
+}
 impl<F: Div<Output = F> + Copy, C: Check<F>> Div<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
@@ -208,6 +235,15 @@ impl<F: Div<Output = F> + Copy, C: Check<F>> Div<F> for Checked<F, C> {
         }
     }
 }
+impl<F: DivAssign + Copy, C: Check<F>> DivAssign<F> for Checked<F, C> {
+    #[track_caller]
+    fn div_assign(&mut self, rhs: F) {
+        self.0 /= rhs;
+        if STRICT {
+            unwrap_display(C::check(self.0));
+        }
+    }
+}
 impl<F: Rem<Output = F> + Copy, C: Check<F>> Rem<F> for Checked<F, C> {
     type Output = Self;
     #[track_caller]
@@ -216,6 +252,15 @@ impl<F: Rem<Output = F> + Copy, C: Check<F>> Rem<F> for Checked<F, C> {
             unwrap_display(self.try_rem(rhs))
         } else {
             checked!(self.0 % rhs)
+        }
+    }
+}
+impl<F: RemAssign + Copy, C: Check<F>> RemAssign<F> for Checked<F, C> {
+    #[track_caller]
+    fn rem_assign(&mut self, rhs: F) {
+        self.0 %= rhs;
+        if STRICT {
+            unwrap_display(C::check(self.0));
         }
     }
 }

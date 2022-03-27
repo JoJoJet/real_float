@@ -81,7 +81,7 @@ impl<F: IsNan + ToOrd> Ord for Real<F> {
     }
 }
 
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 impl<F: IsNan> Real<F> {
     /// Attempts to add two numbers.
     /// # Errors
@@ -109,11 +109,23 @@ impl<F: Add<Output = F> + IsNan, Rhs: IntoInner<F>> Add<Rhs> for Real<F> {
         Self(self.0 + rhs.into_inner())
     }
 }
+impl<F: AddAssign + IsNan, Rhs: IntoInner<F>> AddAssign<Rhs> for Real<F> {
+    #[track_caller]
+    fn add_assign(&mut self, rhs: Rhs) {
+        self.0 += rhs.into_inner();
+    }
+}
 impl<F: Sub<Output = F> + IsNan, Rhs: IntoInner<F>> Sub<Rhs> for Real<F> {
     type Output = Self;
     #[track_caller]
     fn sub(self, rhs: Rhs) -> Self::Output {
         Self(self.0 - rhs.into_inner())
+    }
+}
+impl<F: SubAssign + IsNan, Rhs: IntoInner<F>> SubAssign<Rhs> for Real<F> {
+    #[track_caller]
+    fn sub_assign(&mut self, rhs: Rhs) {
+        self.0 -= rhs.into_inner();
     }
 }
 impl<F: Neg<Output = F> + IsNan> Neg for Real<F> {
@@ -123,7 +135,7 @@ impl<F: Neg<Output = F> + IsNan> Neg for Real<F> {
     }
 }
 
-use std::ops::{Div, Mul, Rem};
+use std::ops::{Div, DivAssign, Mul, MulAssign, Rem, RemAssign};
 impl<F: IsNan> Real<F> {
     /// Attempts to multiply two numbers.
     /// # Errors
@@ -160,6 +172,12 @@ impl<F: Mul<Output = F> + IsNan, Rhs: IntoInner<F>> Mul<Rhs> for Real<F> {
         Self(self.0 * rhs.into_inner())
     }
 }
+impl<F: MulAssign + IsNan, Rhs: IntoInner<F>> MulAssign<Rhs> for Real<F> {
+    #[track_caller]
+    fn mul_assign(&mut self, rhs: Rhs) {
+        self.0 *= rhs.into_inner();
+    }
+}
 impl<F: Div<Output = F> + IsNan, Rhs: IntoInner<F>> Div<Rhs> for Real<F> {
     type Output = Self;
     #[track_caller]
@@ -167,11 +185,23 @@ impl<F: Div<Output = F> + IsNan, Rhs: IntoInner<F>> Div<Rhs> for Real<F> {
         Self(self.0 / rhs.into_inner())
     }
 }
+impl<F: DivAssign + IsNan, Rhs: IntoInner<F>> DivAssign<Rhs> for Real<F> {
+    #[track_caller]
+    fn div_assign(&mut self, rhs: Rhs) {
+        self.0 /= rhs.into_inner();
+    }
+}
 impl<F: Rem<Output = F> + IsNan, Rhs: IntoInner<F>> Rem<Rhs> for Real<F> {
     type Output = Self;
     #[track_caller]
     fn rem(self, rhs: Rhs) -> Self::Output {
         Self(self.0 % rhs.into_inner())
+    }
+}
+impl<F: RemAssign + IsNan, Rhs: IntoInner<F>> RemAssign<Rhs> for Real<F> {
+    #[track_caller]
+    fn rem_assign(&mut self, rhs: Rhs) {
+        self.0 %= rhs.into_inner();
     }
 }
 

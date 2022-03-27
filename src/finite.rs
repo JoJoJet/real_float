@@ -81,7 +81,7 @@ impl<F: IsFinite + ToOrd> Ord for Finite<F> {
     }
 }
 
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 impl<F: IsFinite> Finite<F> {
     /// Attempts to add two numbers.
     /// # Errors
@@ -109,11 +109,23 @@ impl<F: Add<Output = F> + IsFinite, Rhs: IntoInner<F>> Add<Rhs> for Finite<F> {
         Self(self.0 + rhs.into_inner())
     }
 }
+impl<F: AddAssign + IsFinite, Rhs: IntoInner<F>> AddAssign<Rhs> for Finite<F> {
+    #[track_caller]
+    fn add_assign(&mut self, rhs: Rhs) {
+        self.0 += rhs.into_inner();
+    }
+}
 impl<F: Sub<Output = F> + IsFinite, Rhs: IntoInner<F>> Sub<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
     fn sub(self, rhs: Rhs) -> Self::Output {
         Self(self.0 - rhs.into_inner())
+    }
+}
+impl<F: SubAssign + IsFinite, Rhs: IntoInner<F>> SubAssign<Rhs> for Finite<F> {
+    #[track_caller]
+    fn sub_assign(&mut self, rhs: Rhs) {
+        self.0 -= rhs.into_inner();
     }
 }
 impl<F: Neg<Output = F> + IsFinite> Neg for Finite<F> {
@@ -123,7 +135,7 @@ impl<F: Neg<Output = F> + IsFinite> Neg for Finite<F> {
     }
 }
 
-use std::ops::{Div, Mul, Rem};
+use std::ops::{Div, DivAssign, Mul, MulAssign, Rem, RemAssign};
 impl<F: IsFinite> Finite<F> {
     /// Attempts to multiply two numbers.
     /// # Errors
@@ -160,6 +172,12 @@ impl<F: Mul<Output = F> + IsFinite, Rhs: IntoInner<F>> Mul<Rhs> for Finite<F> {
         Self(self.0 * rhs.into_inner())
     }
 }
+impl<F: MulAssign + IsFinite, Rhs: IntoInner<F>> MulAssign<Rhs> for Finite<F> {
+    #[track_caller]
+    fn mul_assign(&mut self, rhs: Rhs) {
+        self.0 *= rhs.into_inner();
+    }
+}
 impl<F: Div<Output = F> + IsFinite, Rhs: IntoInner<F>> Div<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
@@ -167,11 +185,23 @@ impl<F: Div<Output = F> + IsFinite, Rhs: IntoInner<F>> Div<Rhs> for Finite<F> {
         Self(self.0 / rhs.into_inner())
     }
 }
+impl<F: DivAssign + IsFinite, Rhs: IntoInner<F>> DivAssign<Rhs> for Finite<F> {
+    #[track_caller]
+    fn div_assign(&mut self, rhs: Rhs) {
+        self.0 /= rhs.into_inner();
+    }
+}
 impl<F: Rem<Output = F> + IsFinite, Rhs: IntoInner<F>> Rem<Rhs> for Finite<F> {
     type Output = Self;
     #[track_caller]
     fn rem(self, rhs: Rhs) -> Self::Output {
         Self(self.0 % rhs.into_inner())
+    }
+}
+impl<F: RemAssign + IsFinite, Rhs: IntoInner<F>> RemAssign<Rhs> for Finite<F> {
+    #[track_caller]
+    fn rem_assign(&mut self, rhs: Rhs) {
+        self.0 %= rhs.into_inner();
     }
 }
 
