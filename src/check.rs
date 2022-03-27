@@ -104,6 +104,56 @@ impl<F: ToOrd, C: Check<F>> Ord for Checked<F, C> {
     }
 }
 
+use crate::Round;
+impl<F: Round, C: Check<F>> Checked<F, C> {
+    pub fn floor(self) -> Self {
+        checked!(self.0.floor())
+    }
+    pub fn ceil(self) -> Self {
+        checked!(self.0.ceil())
+    }
+    pub fn round(self) -> Self {
+        checked!(self.0.round())
+    }
+    pub fn trunc(self) -> Self {
+        checked!(self.0.trunc())
+    }
+    pub fn fract(self) -> Self {
+        checked!(self.0.fract())
+    }
+}
+
+use crate::Signed;
+impl<F: Signed, C: Check<F>> Checked<F, C> {
+    pub fn abs(self) -> Self {
+        checked!(self.0.abs())
+    }
+    pub fn signum(self) -> Self {
+        checked!(self.0.signum())
+    }
+    pub fn is_sign_positive(self) -> bool {
+        self.0.is_sign_positive()
+    }
+    pub fn is_sign_negative(self) -> bool {
+        self.0.is_sign_negative()
+    }
+}
+
+impl<F: Copy + ToOrd, C: Check<F>> Checked<F, C> {
+    pub fn max(self, other: F) -> Self {
+        match self.partial_cmp(&other) {
+            Some(std::cmp::Ordering::Less) => checked!(other),
+            _ => self,
+        }
+    }
+    pub fn min(self, other: F) -> Self {
+        match self.partial_cmp(&other) {
+            Some(std::cmp::Ordering::Less) => self,
+            _ => checked!(other),
+        }
+    }
+}
+
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 impl<F: Copy, C: Check<F>> Checked<F, C> {
     pub fn try_add(self, rhs: F) -> Result<Self, C::Error>
@@ -303,6 +353,11 @@ impl<F: Copy + Root, C: Check<F>> Checked<F, C> {
         let output = self.0.cbrt();
         Self::try_new(output)
     }
+    pub fn try_hypot(self, other: F) -> Result<Self, C::Error> {
+        let output = self.0.hypot(other);
+        Self::try_new(output)
+    }
+
     #[track_caller]
     pub fn sqrt(self) -> Self {
         if STRICT {
@@ -317,6 +372,55 @@ impl<F: Copy + Root, C: Check<F>> Checked<F, C> {
             unwrap_display(self.try_cbrt())
         } else {
             checked!(self.0.cbrt())
+        }
+    }
+    #[track_caller]
+    pub fn hypot(self, other: F) -> Self {
+        if STRICT {
+            unwrap_display(self.try_hypot(other))
+        } else {
+            checked!(self.0.hypot(other))
+        }
+    }
+}
+
+use crate::Exp;
+impl<F: Copy + Exp, C: Check<F>> Checked<F, C> {
+    pub fn try_exp(self) -> Result<Self, C::Error> {
+        let output = self.0.exp();
+        Self::try_new(output)
+    }
+    pub fn try_exp2(self) -> Result<Self, C::Error> {
+        let output = self.0.exp2();
+        Self::try_new(output)
+    }
+    pub fn try_exp_m1(self) -> Result<Self, C::Error> {
+        let output = self.0.exp_m1();
+        Self::try_new(output)
+    }
+
+    #[track_caller]
+    pub fn exp(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_exp())
+        } else {
+            checked!(self.0.exp())
+        }
+    }
+    #[track_caller]
+    pub fn exp2(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_exp2())
+        } else {
+            checked!(self.0.exp2())
+        }
+    }
+    #[track_caller]
+    pub fn exp_m1(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_exp_m1())
+        } else {
+            checked!(self.0.exp_m1())
         }
     }
 }
@@ -337,6 +441,10 @@ impl<F: Copy + Log, C: Check<F>> Checked<F, C> {
     }
     pub fn try_log10(self) -> Result<Self, C::Error> {
         let output = self.0.log10();
+        Self::try_new(output)
+    }
+    pub fn try_ln_1p(self) -> Result<Self, C::Error> {
+        let output = self.0.ln_1p();
         Self::try_new(output)
     }
 
@@ -370,6 +478,118 @@ impl<F: Copy + Log, C: Check<F>> Checked<F, C> {
             unwrap_display(self.try_log10())
         } else {
             checked!(self.0.log10())
+        }
+    }
+    #[track_caller]
+    pub fn ln_1p(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_ln_1p())
+        } else {
+            checked!(self.0.ln_1p())
+        }
+    }
+}
+
+use crate::Trig;
+impl<F: Copy + Trig, C: Check<F>> Checked<F, C> {
+    pub fn try_sin(self) -> Result<Self, C::Error> {
+        let output = self.0.sin();
+        Self::try_new(output)
+    }
+    pub fn try_cos(self) -> Result<Self, C::Error> {
+        let output = self.0.cos();
+        Self::try_new(output)
+    }
+    pub fn try_sin_cos(self) -> Result<(Self, Self), C::Error> {
+        let (s, c) = self.0.sin_cos();
+        let s = Self::try_new(s)?;
+        let c = Self::try_new(c)?;
+        Ok((s, c))
+    }
+    pub fn try_tan(self) -> Result<Self, C::Error> {
+        let output = self.0.tan();
+        Self::try_new(output)
+    }
+    pub fn try_asin(self) -> Result<Self, C::Error> {
+        let output = self.0.asin();
+        Self::try_new(output)
+    }
+    pub fn try_acos(self) -> Result<Self, C::Error> {
+        let output = self.0.acos();
+        Self::try_new(output)
+    }
+    pub fn try_atan(self) -> Result<Self, C::Error> {
+        let output = self.0.atan();
+        Self::try_new(output)
+    }
+    pub fn try_atan2(self, other: F) -> Result<Self, C::Error> {
+        let output = self.0.atan2(other);
+        Self::try_new(output)
+    }
+
+    #[track_caller]
+    pub fn sin(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_sin())
+        } else {
+            checked!(self.0.sin())
+        }
+    }
+    #[track_caller]
+    pub fn cos(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_cos())
+        } else {
+            checked!(self.0.cos())
+        }
+    }
+    #[track_caller]
+    pub fn sin_cos(self) -> (Self, Self) {
+        if STRICT {
+            unwrap_display(self.try_sin_cos())
+        } else {
+            let (s, c) = self.0.sin_cos();
+            (checked!(s), checked!(c))
+        }
+    }
+    #[track_caller]
+    pub fn tan(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_tan())
+        } else {
+            checked!(self.0.tan())
+        }
+    }
+    #[track_caller]
+    pub fn asin(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_asin())
+        } else {
+            checked!(self.0.asin())
+        }
+    }
+    #[track_caller]
+    pub fn acos(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_acos())
+        } else {
+            checked!(self.0.acos())
+        }
+    }
+    #[track_caller]
+    pub fn atan(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_atan())
+        } else {
+            checked!(self.0.atan())
+        }
+    }
+    #[track_caller]
+    pub fn atan2(self, other: F) -> Self {
+        if STRICT {
+            unwrap_display(self.try_atan2(other))
+        } else {
+            checked!(self.0.atan2(other))
         }
     }
 }

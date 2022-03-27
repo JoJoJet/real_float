@@ -81,6 +81,67 @@ impl<F: IsNan + ToOrd> Ord for Real<F> {
     }
 }
 
+use crate::Round;
+impl<F: IsNan + Round> Real<F> {
+    #[must_use]
+    pub fn floor(self) -> Self {
+        Self(self.0.floor())
+    }
+    #[must_use]
+    pub fn ceil(self) -> Self {
+        Self(self.0.ceil())
+    }
+    #[must_use]
+    pub fn round(self) -> Self {
+        Self(self.0.round())
+    }
+    #[must_use]
+    pub fn trunc(self) -> Self {
+        Self(self.0.trunc())
+    }
+    #[must_use]
+    pub fn fract(self) -> Self {
+        Self(self.0.fract())
+    }
+}
+
+use crate::Signed;
+impl<F: IsNan + Signed> Real<F> {
+    /// Computes the absolute value of self.
+    #[must_use]
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
+    }
+    /// Returns a number that represents the sign of self.
+    /// * `1.0` if the number is positive, `+0.0` or `INFINITY`
+    /// * `-1.0` if the number is negative, `-0.0` or `NEG_INFINITY`
+    #[must_use]
+    pub fn signum(self) -> Self {
+        Self(self.0.signum())
+    }
+    /// Returns true if self has a negative sign, including -0.0 and negative infinity.
+    #[must_use]
+    pub fn is_sign_negative(self) -> bool {
+        self.0.is_sign_negative()
+    }
+    /// Returns true if self has a positive sign, including +0.0 and positive infinity.
+    #[must_use]
+    pub fn is_sign_positive(self) -> bool {
+        self.0.is_sign_positive()
+    }
+}
+
+impl<F: IsNan + ToOrd> Real<F> {
+    #[must_use]
+    pub fn max(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.max(other.into_inner()))
+    }
+    #[must_use]
+    pub fn min(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.min(other.into_inner()))
+    }
+}
+
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 impl<F: IsNan> Real<F> {
     /// Attempts to add two numbers.
@@ -245,6 +306,14 @@ impl<F: IsNan + Root> Real<F> {
     pub fn try_cbrt(self) -> Result<Self, NanError> {
         self.0.try_cbrt().map(Self)
     }
+    /// Attempts to calculate the length of the hypotenuse of a
+    /// right-angle triangle given legs of length `x` and `y`.
+    /// # Errors
+    /// If the result is NaN.
+    pub fn try_hypot(self, other: impl IntoInner<F>) -> Result<Self, NanError> {
+        self.0.try_hypot(other.into_inner()).map(Self)
+    }
+
     #[track_caller]
     #[must_use]
     pub fn sqrt(self) -> Self {
@@ -254,6 +323,49 @@ impl<F: IsNan + Root> Real<F> {
     #[must_use]
     pub fn cbrt(self) -> Self {
         Self(self.0.cbrt())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn hypot(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.hypot(other.into_inner()))
+    }
+}
+
+use crate::Exp;
+impl<F: IsNan + Exp> Real<F> {
+    /// Attempts to find `e^(self)`, the exponential function.
+    /// # Errors
+    /// If the result is NaN.
+    pub fn try_exp(self) -> Result<Self, NanError> {
+        self.0.try_exp().map(Self)
+    }
+    /// Attempts to find `2^(self)`.
+    /// # Errors
+    /// If the result is NaN.
+    pub fn try_exp2(self) -> Result<Self, NanError> {
+        self.0.try_exp().map(Self)
+    }
+    /// Attempts to find `e^(self) - 1` in a way that is accurate even if the number is close to zero.
+    /// # Errors
+    /// If the result is NaN.
+    pub fn try_exp_m1(self) -> Result<Self, NanError> {
+        self.0.try_exp_m1().map(Self)
+    }
+
+    #[track_caller]
+    #[must_use]
+    pub fn exp(self) -> Self {
+        Self(self.0.exp())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp2(self) -> Self {
+        Self(self.0.exp2())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp_m1(self) -> Self {
+        Self(self.0.exp_m1())
     }
 }
 
@@ -283,6 +395,12 @@ impl<F: IsNan + Log> Real<F> {
     pub fn try_log10(self) -> Result<Self, NanError> {
         self.0.try_log10().map(Self)
     }
+    /// Attempts to find `ln(1+n)` (natural logarithm) more accurately than if the operations were performed separately.
+    /// # Errors
+    /// If the result is NaN.
+    pub fn try_ln_1p(self) -> Result<Self, NanError> {
+        self.0.try_ln_1p().map(Self)
+    }
 
     #[track_caller]
     #[must_use]
@@ -303,6 +421,100 @@ impl<F: IsNan + Log> Real<F> {
     #[must_use]
     pub fn log10(self) -> Self {
         Self(self.0.log10())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn ln_1p(self) -> Self {
+        Self(self.0.ln_1p())
+    }
+}
+
+use crate::Trig;
+impl<F: IsNan + Trig> Real<F> {
+    /// Attempts to compute the sine of a number (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the input is `±infinity`).
+    pub fn try_sin(self) -> Result<Self, NanError> {
+        self.0.try_sin().map(Self)
+    }
+    /// Attempts to compute the cosine of a number (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the input is `±infinity`).
+    pub fn try_cos(self) -> Result<Self, NanError> {
+        self.0.try_cos().map(Self)
+    }
+    /// Attempts to compute both the sine and cosine of a number simultaneously (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the input is `±infinity`).
+    pub fn try_sin_cos(self) -> Result<(Self, Self), NanError> {
+        let (s, c) = self.0.try_sin_cos()?;
+        Ok((Self(s), Self(c)))
+    }
+    /// Attempts to compute the tangent of a number (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the input is `±infinity`).
+    pub fn try_tan(self) -> Result<Self, NanError> {
+        self.0.try_tan().map(Self)
+    }
+    /// Attempts to compute the arcsine of a number (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the magnitude of the input exceeds 1).
+    pub fn try_asin(self) -> Result<Self, NanError> {
+        self.0.try_asin().map(Self)
+    }
+    /// Attempts to compute the arccosine of a number (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the magnitude of the input exceeds 1).
+    pub fn try_acos(self) -> Result<Self, NanError> {
+        self.0.try_acos().map(Self)
+    }
+    /// Attempts to ompute the four quadrant arctangent of self (y) and other (x) in radians.
+    /// # Errors
+    /// If the output is NaN.
+    pub fn try_atan2(self, other: impl IntoInner<F>) -> Result<Self, NanError> {
+        self.0.try_atan2(other.into_inner()).map(Self)
+    }
+
+    #[track_caller]
+    #[must_use]
+    pub fn sin(self) -> Self {
+        Self(self.0.sin())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn cos(self) -> Self {
+        Self(self.0.cos())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn sin_cos(self) -> (Self, Self) {
+        let (s, c) = self.0.sin_cos();
+        (Self(s), Self(c))
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn tan(self) -> Self {
+        Self(self.0.tan())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn asin(self) -> Self {
+        Self(self.0.asin())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn acos(self) -> Self {
+        Self(self.0.acos())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn atan(self) -> Self {
+        Self(self.0.atan())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn atan2(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.atan2(other.into_inner()))
     }
 }
 

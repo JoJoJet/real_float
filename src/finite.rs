@@ -81,6 +81,67 @@ impl<F: IsFinite + ToOrd> Ord for Finite<F> {
     }
 }
 
+use crate::Round;
+impl<F: IsFinite + Round> Finite<F> {
+    #[must_use]
+    pub fn floor(self) -> Self {
+        Self(self.0.floor())
+    }
+    #[must_use]
+    pub fn ceil(self) -> Self {
+        Self(self.0.ceil())
+    }
+    #[must_use]
+    pub fn round(self) -> Self {
+        Self(self.0.round())
+    }
+    #[must_use]
+    pub fn trunc(self) -> Self {
+        Self(self.0.trunc())
+    }
+    #[must_use]
+    pub fn fract(self) -> Self {
+        Self(self.0.fract())
+    }
+}
+
+use crate::Signed;
+impl<F: IsFinite + Signed> Finite<F> {
+    /// Computes the absolute value of self.
+    #[must_use]
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
+    }
+    /// Returns a number that represents the sign of self.
+    /// * `1.0` if the number is positive or `+0.0`.
+    /// * `-1.0` if the number is negative or `-0.0`.
+    #[must_use]
+    pub fn signum(self) -> Self {
+        Self(self.0.signum())
+    }
+    /// Returns true if self has a negative sign, including -0.0 and negative infinity.
+    #[must_use]
+    pub fn is_sign_negative(self) -> bool {
+        self.0.is_sign_negative()
+    }
+    /// Returns true if self has a positive sign, including +0.0 and positive infinity.
+    #[must_use]
+    pub fn is_sign_positive(self) -> bool {
+        self.0.is_sign_positive()
+    }
+}
+
+impl<F: IsFinite + ToOrd> Finite<F> {
+    #[must_use]
+    pub fn max(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.max(other.into_inner()))
+    }
+    #[must_use]
+    pub fn min(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.min(other.into_inner()))
+    }
+}
+
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 impl<F: IsFinite> Finite<F> {
     /// Attempts to add two numbers.
@@ -245,6 +306,14 @@ impl<F: IsFinite + Root> Finite<F> {
     pub fn try_cbrt(self) -> Result<Self, InfiniteError> {
         self.0.try_cbrt().map(Self)
     }
+    /// Attempts to calculate the length of the hypotenuse of a
+    /// right-angle triangle given legs of length `x` and `y`.
+    /// # Errors
+    /// If the output is non-finite.
+    pub fn try_hypot(self, other: impl IntoInner<F>) -> Result<Self, InfiniteError> {
+        self.0.try_hypot(other.into_inner()).map(Self)
+    }
+
     #[track_caller]
     #[must_use]
     pub fn sqrt(self) -> Self {
@@ -254,6 +323,49 @@ impl<F: IsFinite + Root> Finite<F> {
     #[must_use]
     pub fn cbrt(self) -> Self {
         Self(self.0.cbrt())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn hypot(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.hypot(other.into_inner()))
+    }
+}
+
+use crate::Exp;
+impl<F: IsFinite + Exp> Finite<F> {
+    /// Attempts to find `e^(self)`, the exponential function.
+    /// # Errors
+    /// If the output is non-finite.
+    pub fn try_exp(self) -> Result<Self, InfiniteError> {
+        self.0.try_exp().map(Self)
+    }
+    /// Attempts to find `2^(self)`.
+    /// # Errors
+    /// If the output is non-finite.
+    pub fn try_exp2(self) -> Result<Self, InfiniteError> {
+        self.0.try_exp().map(Self)
+    }
+    /// Attempts to find `e^(self) - 1` in a way that is accurate even if the number is close to zero.
+    /// # Errors
+    /// If the output is non-finite.
+    pub fn try_exp_m1(self) -> Result<Self, InfiniteError> {
+        self.0.try_exp_m1().map(Self)
+    }
+
+    #[track_caller]
+    #[must_use]
+    pub fn exp(self) -> Self {
+        Self(self.0.exp())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp2(self) -> Self {
+        Self(self.0.exp2())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp_m1(self) -> Self {
+        Self(self.0.exp_m1())
     }
 }
 
@@ -279,9 +391,15 @@ impl<F: IsFinite + Log> Finite<F> {
     }
     /// Attempts to find the log base 10 of self.
     /// # Errors
-    /// If the result is non-finite.
+    /// If the output is non-finite.
     pub fn try_log10(self) -> Result<Self, InfiniteError> {
         self.0.try_log10().map(Self)
+    }
+    /// Attempts to find `ln(1+n)` (natural logarithm) more accurately than if the operations were performed separately.
+    /// # Errors
+    /// If the output is non-finite.
+    pub fn try_ln_1p(self) -> Result<Self, InfiniteError> {
+        self.0.try_ln_1p().map(Self)
     }
 
     #[track_caller]
@@ -303,6 +421,81 @@ impl<F: IsFinite + Log> Finite<F> {
     #[must_use]
     pub fn log10(self) -> Self {
         Self(self.0.log10())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn ln_1p(self) -> Self {
+        Self(self.0.ln_1p())
+    }
+}
+
+use crate::Trig;
+impl<F: IsFinite + Trig> Finite<F> {
+    /// Attempts to compute the tangent of a number (in radians).
+    /// # Errors
+    /// If the output is non-finite.
+    pub fn try_tan(self) -> Result<Self, InfiniteError> {
+        self.0.try_tan().map(Self)
+    }
+    /// Attempts to compute the arcsine of a number (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the magnitude of the input exceeds 1).
+    pub fn try_asin(self) -> Result<Self, InfiniteError> {
+        self.0.try_asin().map(Self)
+    }
+    /// Attempts to compute the arccosine of a number (in radians).
+    /// # Errors
+    /// If the output is NaN (caused if the magnitude of the input exceeds 1).
+    pub fn try_acos(self) -> Result<Self, InfiniteError> {
+        self.0.try_acos().map(Self)
+    }
+    /// Attempts to ompute the four quadrant arctangent of self (y) and other (x) in radians.
+    /// # Errors
+    /// If the output is NaN or non-finite.
+    pub fn try_atan2(self, other: impl IntoInner<F>) -> Result<Self, InfiniteError> {
+        self.0.try_atan2(other.into_inner()).map(Self)
+    }
+
+    #[track_caller]
+    #[must_use]
+    pub fn sin(self) -> Self {
+        Self(self.0.sin())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn cos(self) -> Self {
+        Self(self.0.cos())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn sin_cos(self) -> (Self, Self) {
+        let (s, c) = self.0.sin_cos();
+        (Self(s), Self(c))
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn tan(self) -> Self {
+        Self(self.0.tan())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn asin(self) -> Self {
+        Self(self.0.asin())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn acos(self) -> Self {
+        Self(self.0.acos())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn atan(self) -> Self {
+        Self(self.0.atan())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn atan2(self, other: impl IntoInner<F>) -> Self {
+        Self(self.0.atan2(other.into_inner()))
     }
 }
 
