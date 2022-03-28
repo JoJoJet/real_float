@@ -51,6 +51,11 @@ impl<F: IsFinite> Finite<F> {
     pub fn val(self) -> F {
         self.0.val()
     }
+
+    #[cfg_attr(track_caller, debug_assertions)]
+    fn new_unchecked(val: F) -> Self {
+        Self(Checked::new_unchecked(val))
+    }
 }
 
 impl<F: IsFinite> IntoInner<F> for Finite<F> {
@@ -463,25 +468,28 @@ impl<F: IsFinite + Trig> Finite<F> {
         self.0.try_atan2(other.into_inner()).map(Self)
     }
 
-    #[track_caller]
+    #[cfg_attr(track_caller, debug_assertions)]
     #[must_use]
     pub fn sin(self) -> Self {
-        Self(self.0.sin())
+        // Sine always succeeds for any finite value
+        Self::new_unchecked(self.val().sin())
     }
-    #[track_caller]
+    #[cfg_attr(track_caller, debug_assertions)]
     #[must_use]
     pub fn cos(self) -> Self {
-        Self(self.0.cos())
+        // Cosine always succeeds for any finite value
+        Self::new_unchecked(self.val().cos())
     }
-    #[track_caller]
+    #[cfg_attr(track_caller, debug_assertions)]
     #[must_use]
     pub fn sin_cos(self) -> (Self, Self) {
-        let (s, c) = self.0.sin_cos();
-        (Self(s), Self(c))
+        let (s, c) = self.val().sin_cos();
+        (Self::new_unchecked(s), Self::new_unchecked(c))
     }
     #[track_caller]
     #[must_use]
     pub fn tan(self) -> Self {
+        // tan might return infinity if you input PI/2
         Self(self.0.tan())
     }
     #[track_caller]

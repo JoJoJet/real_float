@@ -36,6 +36,13 @@ impl<F: Copy, C: Check<F>> Checked<F, C> {
     pub fn val(self) -> F {
         self.0
     }
+
+    #[cfg_attr(track_caller, debug_assertions)]
+    pub(crate) fn new_unchecked(val: F) -> Self {
+        #[cfg(debug_assertions)]
+        unwrap_display(C::check(val)); // keep the check in debug mode bc why not
+        checked!(val)
+    }
 }
 
 impl<F: fmt::Debug, C: Check<F>> fmt::Debug for Checked<F, C> {

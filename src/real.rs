@@ -51,6 +51,11 @@ impl<F: IsNan> Real<F> {
     pub fn val(self) -> F {
         self.0.val()
     }
+
+    #[cfg_attr(track_caller, debug_assertions)]
+    fn new_unchecked(val: F) -> Self {
+        Self(Checked::new_unchecked(val))
+    }
 }
 
 impl<F: IsNan> IntoInner<F> for Real<F> {
@@ -513,10 +518,11 @@ impl<F: IsNan + Trig> Real<F> {
     pub fn acos(self) -> Self {
         Self(self.0.acos())
     }
-    #[track_caller]
+    #[cfg_attr(track_caller, debug_assertions)]
     #[must_use]
     pub fn atan(self) -> Self {
-        Self(self.0.atan())
+        // arctangent always succeeds for real values
+        Self::new_unchecked(self.val().atan())
     }
     #[track_caller]
     #[must_use]
