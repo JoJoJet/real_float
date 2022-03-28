@@ -325,6 +325,10 @@ impl<F: Copy + Pow, C: Check<F>> Checked<F, C> {
         let output = self.0.powi(n);
         Self::try_new(output)
     }
+    pub fn try_recip(self) -> Result<Self, C::Error> {
+        let output = self.0.recip();
+        Self::try_new(output)
+    }
     pub fn try_sqrt(self) -> Result<Self, C::Error> {
         let output = self.0.sqrt();
         Self::try_new(output)
@@ -352,6 +356,14 @@ impl<F: Copy + Pow, C: Check<F>> Checked<F, C> {
             unwrap_display(self.try_powi(n))
         } else {
             checked!(self.0.powi(n))
+        }
+    }
+    #[track_caller]
+    pub fn recip(self) -> Self {
+        if STRICT {
+            unwrap_display(self.try_recip())
+        } else {
+            checked!(self.0.recip())
         }
     }
     #[track_caller]

@@ -28,6 +28,8 @@ pub trait Pow: Sized + Copy {
     fn powf(self, n: Self) -> Self;
     #[must_use]
     fn powi(self, n: i32) -> Self;
+    #[must_use]
+    fn recip(self) -> Self;
 
     #[must_use]
     fn sqrt(self) -> Self;
@@ -141,6 +143,10 @@ macro_rules! impl_ops {
             #[inline]
             fn powi(self, n: i32) -> $f {
                 <$f>::powi(self, n)
+            }
+            #[inline]
+            fn recip(self) -> $f {
+                <$f>::recip(self)
             }
 
             #[inline]
@@ -300,6 +306,10 @@ mod impl_num_traits {
         #[inline]
         fn powi(self, n: i32) -> Self {
             <F as Float>::powi(self, n)
+        }
+        #[inline]
+        fn recip(self) -> Self {
+            <F as Float>::recip(self)
         }
 
         #[inline]

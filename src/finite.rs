@@ -285,6 +285,12 @@ impl<F: IsFinite + Pow> Finite<F> {
     pub fn try_powi(self, n: i32) -> Result<Self, InfiniteError> {
         self.0.try_powi(n).map(Self)
     }
+    /// Attempts to compute the reciprocal (`1/x`) of `self`.
+    /// # Errors
+    /// If the result is non-finite.
+    pub fn try_recip(self) -> Result<Self, InfiniteError> {
+        self.0.try_recip().map(Self)
+    }
     /// Attempts to find the square root of a number.
     /// # Errors
     /// If the result is non-finite.
@@ -314,6 +320,11 @@ impl<F: IsFinite + Pow> Finite<F> {
     #[must_use]
     pub fn powi(self, n: i32) -> Self {
         Self(self.0.powi(n))
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn recip(self) -> Self {
+        Self(self.0.recip())
     }
     #[track_caller]
     #[must_use]

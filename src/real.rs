@@ -285,6 +285,12 @@ impl<F: IsNan + Pow> Real<F> {
     pub fn try_powi(self, n: i32) -> Result<Self, NanError> {
         self.0.try_powi(n).map(Self)
     }
+    /// Attempts to compute the reciprocal (`1/x`) of `self`.
+    /// # Errors
+    /// If the result is NaN.
+    pub fn try_recip(self) -> Result<Self, NanError> {
+        self.0.try_recip().map(Self)
+    }
     /// Attempts to find the square root of a number.
     /// # Errors
     /// If the result is NaN.
@@ -314,6 +320,11 @@ impl<F: IsNan + Pow> Real<F> {
     #[must_use]
     pub fn powi(self, n: i32) -> Self {
         Self(self.0.powi(n))
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn recip(self) -> Self {
+        Self(self.0.recip())
     }
     #[track_caller]
     #[must_use]
