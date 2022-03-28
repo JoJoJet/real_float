@@ -3,6 +3,12 @@ name = "real_float"
 version = "0.1.0"
 edition = "2021"
 
+description = "Floating point types that check for correctness and implement total ordering"
+repository = "https://github.com/JoJoJet/real_float"
+license = "MIT OR Apache-2.0"
+keywords = ["math", "float", "compare", "NaN", "panic"]
+categories = ["mathematics"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
