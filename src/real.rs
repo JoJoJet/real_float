@@ -1,4 +1,4 @@
-use crate::{check::Checked, IntoInner, IsNan};
+use crate::{check::Checked, IntoInner};
 
 /// The error produced when NaN is encountered.
 #[derive(Debug, Clone, Copy)]
@@ -7,6 +7,11 @@ impl std::fmt::Display for NanError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "encountered NaN unexpectedly")
     }
+}
+
+/// Trait for a floating point number that can be checked for NaN (not-a-number).
+pub trait IsNan: Sized + Copy {
+    fn is_nan(self) -> bool;
 }
 
 struct NanCheck;
@@ -81,7 +86,7 @@ impl<F: IsNan + ToOrd> Ord for Real<F> {
     }
 }
 
-use crate::Round;
+use crate::ops::Round;
 impl<F: IsNan + Round> Real<F> {
     #[must_use]
     pub fn floor(self) -> Self {
@@ -105,7 +110,7 @@ impl<F: IsNan + Round> Real<F> {
     }
 }
 
-use crate::Signed;
+use crate::ops::Signed;
 impl<F: IsNan + Signed> Real<F> {
     /// Computes the absolute value of self.
     #[must_use]
@@ -266,7 +271,7 @@ impl<F: RemAssign + IsNan, Rhs: IntoInner<F>> RemAssign<Rhs> for Real<F> {
     }
 }
 
-use crate::Pow;
+use crate::ops::Pow;
 impl<F: IsNan + Pow> Real<F> {
     /// Attempts to raise `self` to the power `n`.
     /// # Errors
@@ -280,20 +285,6 @@ impl<F: IsNan + Pow> Real<F> {
     pub fn try_powi(self, n: i32) -> Result<Self, NanError> {
         self.0.try_powi(n).map(Self)
     }
-    #[track_caller]
-    #[must_use]
-    pub fn powf(self, n: impl IntoInner<F>) -> Self {
-        Self(self.0.powf(n.into_inner()))
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn powi(self, n: i32) -> Self {
-        Self(self.0.powi(n))
-    }
-}
-
-use crate::Root;
-impl<F: IsNan + Root> Real<F> {
     /// Attempts to find the square root of a number.
     /// # Errors
     /// If the result is NaN.
@@ -316,6 +307,16 @@ impl<F: IsNan + Root> Real<F> {
 
     #[track_caller]
     #[must_use]
+    pub fn powf(self, n: impl IntoInner<F>) -> Self {
+        Self(self.0.powf(n.into_inner()))
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn powi(self, n: i32) -> Self {
+        Self(self.0.powi(n))
+    }
+    #[track_caller]
+    #[must_use]
     pub fn sqrt(self) -> Self {
         Self(self.0.sqrt())
     }
@@ -331,7 +332,7 @@ impl<F: IsNan + Root> Real<F> {
     }
 }
 
-use crate::Exp;
+use crate::ops::Exp;
 impl<F: IsNan + Exp> Real<F> {
     /// Attempts to find `e^(self)`, the exponential function.
     /// # Errors
@@ -351,26 +352,6 @@ impl<F: IsNan + Exp> Real<F> {
     pub fn try_exp_m1(self) -> Result<Self, NanError> {
         self.0.try_exp_m1().map(Self)
     }
-
-    #[track_caller]
-    #[must_use]
-    pub fn exp(self) -> Self {
-        Self(self.0.exp())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn exp2(self) -> Self {
-        Self(self.0.exp2())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn exp_m1(self) -> Self {
-        Self(self.0.exp_m1())
-    }
-}
-
-use crate::Log;
-impl<F: IsNan + Log> Real<F> {
     /// Attempts to find the log base `b` of self.
     /// # Errors
     /// If the result is NaN.
@@ -404,6 +385,21 @@ impl<F: IsNan + Log> Real<F> {
 
     #[track_caller]
     #[must_use]
+    pub fn exp(self) -> Self {
+        Self(self.0.exp())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp2(self) -> Self {
+        Self(self.0.exp2())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp_m1(self) -> Self {
+        Self(self.0.exp_m1())
+    }
+    #[track_caller]
+    #[must_use]
     pub fn log(self, base: impl IntoInner<F>) -> Self {
         Self(self.0.log(base.into_inner()))
     }
@@ -429,7 +425,7 @@ impl<F: IsNan + Log> Real<F> {
     }
 }
 
-use crate::Trig;
+use crate::ops::Trig;
 impl<F: IsNan + Trig> Real<F> {
     /// Attempts to compute the sine of a number (in radians).
     /// # Errors

@@ -14,8 +14,7 @@ impl<F> IntoInner<F> for F {
     }
 }
 
-mod ops;
-pub use ops::*;
+pub mod ops;
 
 mod bits;
 pub use bits::ToOrd;
@@ -23,10 +22,10 @@ pub use bits::ToOrd;
 mod check;
 
 mod real;
-pub use real::{NanError, Real};
+pub use real::{IsNan, NanError, Real};
 
 mod finite;
-pub use finite::{Finite, InfiniteError};
+pub use finite::{Finite, InfiniteError, IsFinite};
 
 #[track_caller]
 fn unwrap_display<T, E: std::fmt::Display>(res: Result<T, E>) -> T {

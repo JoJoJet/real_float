@@ -104,7 +104,7 @@ impl<F: ToOrd, C: Check<F>> Ord for Checked<F, C> {
     }
 }
 
-use crate::Round;
+use crate::ops::Round;
 impl<F: Round, C: Check<F>> Checked<F, C> {
     pub fn floor(self) -> Self {
         checked!(self.0.floor())
@@ -123,7 +123,7 @@ impl<F: Round, C: Check<F>> Checked<F, C> {
     }
 }
 
-use crate::Signed;
+use crate::ops::Signed;
 impl<F: Signed, C: Check<F>> Checked<F, C> {
     pub fn abs(self) -> Self {
         checked!(self.0.abs())
@@ -315,7 +315,7 @@ impl<F: RemAssign + Copy, C: Check<F>> RemAssign<F> for Checked<F, C> {
     }
 }
 
-use crate::Pow;
+use crate::ops::Pow;
 impl<F: Copy + Pow, C: Check<F>> Checked<F, C> {
     pub fn try_powf(self, n: F) -> Result<Self, C::Error> {
         let output = self.0.powf(n);
@@ -325,6 +325,19 @@ impl<F: Copy + Pow, C: Check<F>> Checked<F, C> {
         let output = self.0.powi(n);
         Self::try_new(output)
     }
+    pub fn try_sqrt(self) -> Result<Self, C::Error> {
+        let output = self.0.sqrt();
+        Self::try_new(output)
+    }
+    pub fn try_cbrt(self) -> Result<Self, C::Error> {
+        let output = self.0.cbrt();
+        Self::try_new(output)
+    }
+    pub fn try_hypot(self, other: F) -> Result<Self, C::Error> {
+        let output = self.0.hypot(other);
+        Self::try_new(output)
+    }
+
     #[track_caller]
     pub fn powf(self, n: F) -> Self {
         if STRICT {
@@ -341,23 +354,6 @@ impl<F: Copy + Pow, C: Check<F>> Checked<F, C> {
             checked!(self.0.powi(n))
         }
     }
-}
-
-use crate::Root;
-impl<F: Copy + Root, C: Check<F>> Checked<F, C> {
-    pub fn try_sqrt(self) -> Result<Self, C::Error> {
-        let output = self.0.sqrt();
-        Self::try_new(output)
-    }
-    pub fn try_cbrt(self) -> Result<Self, C::Error> {
-        let output = self.0.cbrt();
-        Self::try_new(output)
-    }
-    pub fn try_hypot(self, other: F) -> Result<Self, C::Error> {
-        let output = self.0.hypot(other);
-        Self::try_new(output)
-    }
-
     #[track_caller]
     pub fn sqrt(self) -> Self {
         if STRICT {
@@ -384,7 +380,7 @@ impl<F: Copy + Root, C: Check<F>> Checked<F, C> {
     }
 }
 
-use crate::Exp;
+use crate::ops::Exp;
 impl<F: Copy + Exp, C: Check<F>> Checked<F, C> {
     pub fn try_exp(self) -> Result<Self, C::Error> {
         let output = self.0.exp();
@@ -396,6 +392,26 @@ impl<F: Copy + Exp, C: Check<F>> Checked<F, C> {
     }
     pub fn try_exp_m1(self) -> Result<Self, C::Error> {
         let output = self.0.exp_m1();
+        Self::try_new(output)
+    }
+    pub fn try_log(self, b: F) -> Result<Self, C::Error> {
+        let output = self.0.log(b);
+        Self::try_new(output)
+    }
+    pub fn try_ln(self) -> Result<Self, C::Error> {
+        let output = self.0.ln();
+        Self::try_new(output)
+    }
+    pub fn try_log2(self) -> Result<Self, C::Error> {
+        let output = self.0.log2();
+        Self::try_new(output)
+    }
+    pub fn try_log10(self) -> Result<Self, C::Error> {
+        let output = self.0.log10();
+        Self::try_new(output)
+    }
+    pub fn try_ln_1p(self) -> Result<Self, C::Error> {
+        let output = self.0.ln_1p();
         Self::try_new(output)
     }
 
@@ -423,31 +439,6 @@ impl<F: Copy + Exp, C: Check<F>> Checked<F, C> {
             checked!(self.0.exp_m1())
         }
     }
-}
-
-use crate::Log;
-impl<F: Copy + Log, C: Check<F>> Checked<F, C> {
-    pub fn try_log(self, b: F) -> Result<Self, C::Error> {
-        let output = self.0.log(b);
-        Self::try_new(output)
-    }
-    pub fn try_ln(self) -> Result<Self, C::Error> {
-        let output = self.0.ln();
-        Self::try_new(output)
-    }
-    pub fn try_log2(self) -> Result<Self, C::Error> {
-        let output = self.0.log2();
-        Self::try_new(output)
-    }
-    pub fn try_log10(self) -> Result<Self, C::Error> {
-        let output = self.0.log10();
-        Self::try_new(output)
-    }
-    pub fn try_ln_1p(self) -> Result<Self, C::Error> {
-        let output = self.0.ln_1p();
-        Self::try_new(output)
-    }
-
     #[track_caller]
     pub fn log(self, base: F) -> Self {
         if STRICT {
@@ -490,7 +481,7 @@ impl<F: Copy + Log, C: Check<F>> Checked<F, C> {
     }
 }
 
-use crate::Trig;
+use crate::ops::Trig;
 impl<F: Copy + Trig, C: Check<F>> Checked<F, C> {
     pub fn try_sin(self) -> Result<Self, C::Error> {
         let output = self.0.sin();

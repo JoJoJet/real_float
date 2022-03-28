@@ -1,4 +1,4 @@
-use crate::{check::Checked, IntoInner, IsFinite};
+use crate::{check::Checked, IntoInner};
 
 /// The error produced when infinity or NaN is encountered.
 #[derive(Debug, Clone, Copy)]
@@ -7,6 +7,11 @@ impl std::fmt::Display for InfiniteError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "encountered infinity or NaN unexpectedly")
     }
+}
+
+#[allow(clippy::module_name_repetitions)]
+pub trait IsFinite: Sized + Copy {
+    fn is_finite(self) -> bool;
 }
 
 struct FiniteCheck;
@@ -81,7 +86,7 @@ impl<F: IsFinite + ToOrd> Ord for Finite<F> {
     }
 }
 
-use crate::Round;
+use crate::ops::Round;
 impl<F: IsFinite + Round> Finite<F> {
     #[must_use]
     pub fn floor(self) -> Self {
@@ -105,7 +110,7 @@ impl<F: IsFinite + Round> Finite<F> {
     }
 }
 
-use crate::Signed;
+use crate::ops::Signed;
 impl<F: IsFinite + Signed> Finite<F> {
     /// Computes the absolute value of self.
     #[must_use]
@@ -266,7 +271,7 @@ impl<F: RemAssign + IsFinite, Rhs: IntoInner<F>> RemAssign<Rhs> for Finite<F> {
     }
 }
 
-use crate::Pow;
+use crate::ops::Pow;
 impl<F: IsFinite + Pow> Finite<F> {
     /// Attempts to raise `self` to the power `n`.
     /// # Errors
@@ -280,20 +285,6 @@ impl<F: IsFinite + Pow> Finite<F> {
     pub fn try_powi(self, n: i32) -> Result<Self, InfiniteError> {
         self.0.try_powi(n).map(Self)
     }
-    #[track_caller]
-    #[must_use]
-    pub fn powf(self, n: impl IntoInner<F>) -> Self {
-        Self(self.0.powf(n.into_inner()))
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn powi(self, n: i32) -> Self {
-        Self(self.0.powi(n))
-    }
-}
-
-use crate::Root;
-impl<F: IsFinite + Root> Finite<F> {
     /// Attempts to find the square root of a number.
     /// # Errors
     /// If the result is non-finite.
@@ -316,6 +307,16 @@ impl<F: IsFinite + Root> Finite<F> {
 
     #[track_caller]
     #[must_use]
+    pub fn powf(self, n: impl IntoInner<F>) -> Self {
+        Self(self.0.powf(n.into_inner()))
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn powi(self, n: i32) -> Self {
+        Self(self.0.powi(n))
+    }
+    #[track_caller]
+    #[must_use]
     pub fn sqrt(self) -> Self {
         Self(self.0.sqrt())
     }
@@ -331,7 +332,7 @@ impl<F: IsFinite + Root> Finite<F> {
     }
 }
 
-use crate::Exp;
+use crate::ops::Exp;
 impl<F: IsFinite + Exp> Finite<F> {
     /// Attempts to find `e^(self)`, the exponential function.
     /// # Errors
@@ -351,26 +352,6 @@ impl<F: IsFinite + Exp> Finite<F> {
     pub fn try_exp_m1(self) -> Result<Self, InfiniteError> {
         self.0.try_exp_m1().map(Self)
     }
-
-    #[track_caller]
-    #[must_use]
-    pub fn exp(self) -> Self {
-        Self(self.0.exp())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn exp2(self) -> Self {
-        Self(self.0.exp2())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn exp_m1(self) -> Self {
-        Self(self.0.exp_m1())
-    }
-}
-
-use crate::Log;
-impl<F: IsFinite + Log> Finite<F> {
     /// Attempts to find the log base `b` of self.
     /// # Errors
     /// If the result is non-finite.
@@ -404,6 +385,21 @@ impl<F: IsFinite + Log> Finite<F> {
 
     #[track_caller]
     #[must_use]
+    pub fn exp(self) -> Self {
+        Self(self.0.exp())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp2(self) -> Self {
+        Self(self.0.exp2())
+    }
+    #[track_caller]
+    #[must_use]
+    pub fn exp_m1(self) -> Self {
+        Self(self.0.exp_m1())
+    }
+    #[track_caller]
+    #[must_use]
     pub fn log(self, base: impl IntoInner<F>) -> Self {
         Self(self.0.log(base.into_inner()))
     }
@@ -429,7 +425,7 @@ impl<F: IsFinite + Log> Finite<F> {
     }
 }
 
-use crate::Trig;
+use crate::ops::Trig;
 impl<F: IsFinite + Trig> Finite<F> {
     /// Attempts to compute the tangent of a number (in radians).
     /// # Errors
