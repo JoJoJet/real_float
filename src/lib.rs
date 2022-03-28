@@ -21,6 +21,28 @@ pub use bits::ToOrd;
 
 mod check;
 
+#[cfg(test)]
+macro_rules! assert_epsilon {
+    ($l: expr, $r: expr, $ep: expr) => {{
+        let l = $l;
+        let r = $r;
+        if (l - r).abs() <= $ep {
+            // OK
+        } else {
+            panic!("assertion failed: `left ≈ right`:\nleft: `{l:?}`\nright:`{r:?}`");
+        }
+    }};
+    ($l: expr, $r: expr) => {
+        assert_epsilon!($l, $r, f32::EPSILON);
+    };
+}
+#[cfg(test)]
+macro_rules! assert_err {
+    ($e: expr) => {
+        assert!(($e).is_err())
+    };
+}
+
 mod real;
 pub use real::{IsNan, NanError, Real};
 

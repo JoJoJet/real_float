@@ -535,12 +535,6 @@ impl<F: IsNan + Trig> Real<F> {
 mod tests {
     use super::*;
 
-    macro_rules! assert_err {
-        ($e: expr) => {
-            assert!(($e).is_err())
-        };
-    }
-
     macro_rules! real {
         ($f: expr) => {
             Real::new($f)
@@ -573,6 +567,10 @@ mod tests {
         assert_err!(real!(-1.0f32).try_ln());
         assert_err!(real!(-1.0f32).try_log2());
         assert_err!(real!(-1.0f32).try_log10());
+
+        assert_err!(real!(f32::INFINITY).try_sin());
+        assert_err!(real!(f32::INFINITY).try_cos());
+        assert_err!(real!(f32::INFINITY).try_tan());
     }
 
     #[test]
@@ -582,16 +580,6 @@ mod tests {
         assert_eq!(real!(5.0f32) * 2.0, real!(10.0));
         assert_eq!(real!(8.0f32) / 2.0, real!(4.0));
         assert_eq!(-real!(1.0f32), real!(-1.0));
-
-        assert_eq!(real!(1000.0f32).powf(1000.0), real!(f32::INFINITY));
-        assert_eq!(real!(4.0f32).powf(3.5), real!(128.0));
-        assert_eq!(real!(2.0f32).powi(8), real!(256.0));
-        assert_eq!(real!(4.0f32).sqrt(), real!(2.0));
-        assert_eq!(real!(27.0f32).cbrt(), real!(3.0));
-        assert_eq!(real!(16.0f32).log(4.0), real!(2.0));
-        assert_eq!(real!(1.0f32).ln(), real!(0.0));
-        assert_eq!(real!(8.0f32).log2(), real!(3.0));
-        assert_eq!(real!(1000.0f32).log10(), real!(3.0));
     }
 
     #[test]
@@ -611,5 +599,55 @@ mod tests {
 
         assert_eq!(real!(1.0) < f32::NAN, false);
         assert_eq!(real!(1.0) >= f32::NAN, false);
+    }
+
+    #[test]
+    fn assert_pow() {
+        assert_eq!(real!(1000.0f32).powf(1000.0), real!(f32::INFINITY));
+        assert_eq!(real!(4.0f32).powf(3.5), real!(128.0));
+        assert_eq!(real!(2.0f32).powi(8), real!(256.0));
+        assert_eq!(real!(4.0f32).sqrt(), real!(2.0));
+        assert_eq!(real!(27.0f32).cbrt(), real!(3.0));
+    }
+
+    #[test]
+    fn assert_exp() {
+        assert_epsilon!(real!(2.0f32).exp(), real!(7.389_056));
+        assert_epsilon!(real!(3.0f32).exp2(), real!(8.0));
+        assert_epsilon!(real!(5.0f32).exp_m1(), real!(147.413_16));
+        assert_epsilon!(real!(16.0f32).log(4.0), real!(2.0));
+        assert_epsilon!(real!(1.0f32).ln(), real!(0.0));
+        assert_epsilon!(real!(8.0f32).log2(), real!(3.0));
+        assert_epsilon!(real!(1000.0f32).log10(), real!(3.0));
+        assert_epsilon!(real!(147.413_16f32).ln_1p(), real!(5.0));
+    }
+
+    #[test]
+    fn assert_trig() {
+        use std::f32::consts::{FRAC_1_SQRT_2, PI};
+
+        assert_epsilon!(real!(0.0f32).sin(), real!(0.0));
+        assert_epsilon!(real!(PI / 4.0).sin(), real!(FRAC_1_SQRT_2));
+        assert_epsilon!(real!(PI / 2.0).sin(), real!(1.0));
+
+        assert_epsilon!(real!(0.0f32).cos(), real!(1.0));
+        assert_epsilon!(real!(PI / 4.0).cos(), real!(FRAC_1_SQRT_2));
+        assert_epsilon!(real!(PI / 2.0).cos(), 0.0);
+
+        assert_epsilon!(real!(0.0f32).tan(), real!(0.0));
+        assert_epsilon!(real!(PI / 4.0).tan(), real!(1.0));
+        assert!(real!(PI / 2.0 - f32::EPSILON).tan() > real!(2_000_000.0)); // its big
+
+        assert_epsilon!(real!(0.0f32).asin(), real!(0.0));
+        assert_epsilon!(real!(FRAC_1_SQRT_2).asin(), real!(PI / 4.0));
+        assert_epsilon!(real!(1.0f32).asin(), real!(PI / 2.0));
+
+        assert_epsilon!(real!(0.0f32).acos(), real!(PI / 2.0));
+        assert_epsilon!(real!(FRAC_1_SQRT_2).acos(), real!(PI / 4.0));
+        assert_epsilon!(real!(1.0f32).acos(), real!(0.0));
+
+        assert_epsilon!(real!(0.0f32).atan(), real!(0.0));
+        assert_epsilon!(real!(1.0f32).atan(), real!(PI / 4.0));
+        assert_epsilon!(real!(f32::INFINITY).atan(), real!(PI / 2.0));
     }
 }

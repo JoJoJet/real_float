@@ -518,12 +518,6 @@ impl<F: IsFinite + Trig> Finite<F> {
 mod tests {
     use super::*;
 
-    macro_rules! assert_err {
-        ($e: expr) => {
-            assert!(($e).is_err(), "{:?}", $e)
-        };
-    }
-
     macro_rules! finite {
         ($f: expr) => {
             Finite::new($f)
@@ -578,15 +572,6 @@ mod tests {
         assert_eq!(finite!(5.0f32) * 2.0, finite!(10.0));
         assert_eq!(finite!(8.0f32) / 2.0, finite!(4.0));
         assert_eq!(-finite!(1.0f32), finite!(-1.0));
-
-        assert_eq!(finite!(4.0f32).powf(3.5), finite!(128.0));
-        assert_eq!(finite!(2.0f32).powi(8), finite!(256.0));
-        assert_eq!(finite!(4.0f32).sqrt(), finite!(2.0));
-        assert_eq!(finite!(27.0f32).cbrt(), finite!(3.0));
-        assert_eq!(finite!(16.0f32).log(4.0), finite!(2.0));
-        assert_eq!(finite!(1.0f32).ln(), finite!(0.0));
-        assert_eq!(finite!(8.0f32).log2(), finite!(3.0));
-        assert_eq!(finite!(1000.0f32).log10(), finite!(3.0));
     }
 
     #[test]
@@ -604,5 +589,54 @@ mod tests {
 
         assert_eq!(finite!(1.0) < f32::NAN, false);
         assert_eq!(finite!(1.0) >= f32::NAN, false);
+    }
+
+    #[test]
+    fn assert_pow() {
+        assert_eq!(finite!(4.0f32).powf(3.5), finite!(128.0));
+        assert_eq!(finite!(2.0f32).powi(8), finite!(256.0));
+        assert_eq!(finite!(4.0f32).sqrt(), finite!(2.0));
+        assert_eq!(finite!(27.0f32).cbrt(), finite!(3.0));
+    }
+
+    #[test]
+    fn assert_exp() {
+        assert_epsilon!(finite!(2.0f32).exp(), finite!(7.389_056));
+        assert_epsilon!(finite!(3.0f32).exp2(), finite!(8.0));
+        assert_epsilon!(finite!(5.0f32).exp_m1(), finite!(147.413_16));
+        assert_epsilon!(finite!(16.0f32).log(4.0), finite!(2.0));
+        assert_epsilon!(finite!(1.0f32).ln(), finite!(0.0));
+        assert_epsilon!(finite!(8.0f32).log2(), finite!(3.0));
+        assert_epsilon!(finite!(1000.0f32).log10(), finite!(3.0));
+        assert_epsilon!(finite!(147.413_16f32).ln_1p(), finite!(5.0));
+    }
+
+    #[test]
+    fn assert_trig() {
+        use std::f32::consts::{FRAC_1_SQRT_2, PI};
+
+        assert_epsilon!(finite!(0.0f32).sin(), finite!(0.0));
+        assert_epsilon!(finite!(PI / 4.0).sin(), finite!(FRAC_1_SQRT_2));
+        assert_epsilon!(finite!(PI / 2.0).sin(), finite!(1.0));
+
+        assert_epsilon!(finite!(0.0f32).cos(), finite!(1.0));
+        assert_epsilon!(finite!(PI / 4.0).cos(), finite!(FRAC_1_SQRT_2));
+        assert_epsilon!(finite!(PI / 2.0).cos(), 0.0);
+
+        assert_epsilon!(finite!(0.0f32).tan(), finite!(0.0));
+        assert_epsilon!(finite!(PI / 4.0).tan(), finite!(1.0));
+        // PI / 2 overflows to infinity
+
+        assert_epsilon!(finite!(0.0f32).asin(), finite!(0.0));
+        assert_epsilon!(finite!(FRAC_1_SQRT_2).asin(), finite!(PI / 4.0));
+        assert_epsilon!(finite!(1.0f32).asin(), finite!(PI / 2.0));
+
+        assert_epsilon!(finite!(0.0f32).acos(), finite!(PI / 2.0));
+        assert_epsilon!(finite!(FRAC_1_SQRT_2).acos(), finite!(PI / 4.0));
+        assert_epsilon!(finite!(1.0f32).acos(), finite!(0.0));
+
+        assert_epsilon!(finite!(0.0f32).atan(), finite!(0.0));
+        assert_epsilon!(finite!(1.0f32).atan(), finite!(PI / 4.0));
+        // inf.atan() = infinity, can't show here
     }
 }
