@@ -27,6 +27,9 @@ pub use real::{IsNan, NanError, Real};
 mod finite;
 pub use finite::{Finite, InfiniteError, IsFinite};
 
+#[cfg(feature = "num-traits")]
+pub mod num;
+
 #[track_caller]
 fn unwrap_display<T, E: std::fmt::Display>(res: Result<T, E>) -> T {
     match res {
