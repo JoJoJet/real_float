@@ -1,6 +1,6 @@
 [package]
 name = "real_float"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 description = "Floating point types that check for correctness and implement total ordering"
