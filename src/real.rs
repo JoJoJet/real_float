@@ -26,6 +26,23 @@ impl<F: IsNan> crate::check::Check<F> for NanCheck {
     }
 }
 
+/// Constructor for [`Real`] that never checks the value, and can be used in a const context.
+/// # Safety
+/// Ensure that the value can never be `NaN`.
+#[macro_export]
+macro_rules! real_unchecked {
+    ($f: expr) => {{
+        union Transmute<F: $crate::IsNan> {
+            inner: F,
+            real: $crate::Real<F>,
+        }
+
+        // SAFETY: `Real` is `repr(transparent)`.
+        let val = Transmute { inner: $f };
+        val.real
+    }};
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct Real<F: IsNan>(Checked<F, NanCheck>);
@@ -550,6 +567,12 @@ mod tests {
     #[should_panic]
     fn assert_new_nan2() {
         real!(-f32::NAN);
+    }
+
+    #[test]
+    fn unchecked() {
+        let real = unsafe { real_unchecked!(f32::NAN) };
+        assert!(real.val().is_nan());
     }
 
     #[test]

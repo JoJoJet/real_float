@@ -26,6 +26,23 @@ impl<F: IsFinite> crate::check::Check<F> for FiniteCheck {
     }
 }
 
+/// Constructor for [`Finite`] that never checks the value, and can be used in a const context.
+/// # Safety
+/// Ensure that the value can never be `NaN` or infinite.
+#[macro_export]
+macro_rules! finite_unchecked {
+    ($f: expr) => {{
+        union Transmute<F: $crate::IsFinite> {
+            inner: F,
+            finite: $crate::Finite<F>,
+        }
+
+        // SAFETY: `Finite` is `repr(transparent)`.
+        let val = Transmute { inner: $f };
+        val.finite
+    }};
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct Finite<F: IsFinite>(Checked<F, FiniteCheck>);
@@ -543,6 +560,12 @@ mod tests {
     #[should_panic]
     fn assert_new_inf2() {
         finite!(f32::NEG_INFINITY);
+    }
+
+    #[test]
+    fn unchecked() {
+        let finite = unsafe { finite_unchecked!(f32::INFINITY) };
+        assert!(finite.val().is_infinite());
     }
 
     #[test]
