@@ -15,8 +15,8 @@ pub enum FromStrError<P, C> {
 impl<P: fmt::Display, C: fmt::Display> fmt::Display for FromStrError<P, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Parse(e) => write!(f, "error parsing float: {}", e),
-            Self::Check(e) => write!(f, "error checking float: {}", e),
+            Self::Parse(e) => write!(f, "error parsing float: {e}"),
+            Self::Check(e) => write!(f, "error checking float: {e}"),
         }
     }
 }
