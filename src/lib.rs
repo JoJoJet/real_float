@@ -48,7 +48,12 @@ pub mod ops;
 mod bits;
 pub use bits::ToOrd;
 
-mod check;
+/// whether or not to panic on an invalid value.
+#[doc(hidden)]
+pub const STRICT: bool = cfg!(any(debug_assertions, feature = "strict"));
+
+#[macro_use]
+mod macros;
 
 #[cfg(test)]
 macro_rules! assert_epsilon {

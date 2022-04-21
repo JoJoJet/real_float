@@ -1,4 +1,4 @@
-use crate::{check::Checked, IntoInner};
+use crate::IntoInner;
 
 /// The error produced when NaN is encountered.
 #[derive(Debug, Clone, Copy)]
@@ -12,18 +12,6 @@ impl std::fmt::Display for NanError {
 /// Trait for a floating point number that can be checked for NaN (not-a-number).
 pub trait IsNan: Sized + Copy {
     fn is_nan(self) -> bool;
-}
-
-struct NanCheck;
-impl<F: IsNan> crate::check::Check<F> for NanCheck {
-    type Error = NanError;
-    fn check(val: F) -> Result<F, NanError> {
-        if val.is_nan() {
-            Err(NanError)
-        } else {
-            Ok(val)
-        }
-    }
 }
 
 /// Constructor for [`Real`] that never checks the value, and can be used in a const context.
@@ -45,35 +33,27 @@ macro_rules! real_unchecked {
 
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
-pub struct Real<F: IsNan>(Checked<F, NanCheck>);
+pub struct Real<F: IsNan>(F);
 
 impl<F: IsNan> Real<F> {
-    /// Creates a new [`Real`] float, panicking if it's NaN.  
-    ///
-    /// Note that this function will *not* panic in release mode,
-    /// unless the `strict` feature flag is set.
-    #[track_caller]
-    pub fn new(val: F) -> Self {
-        Self(Checked::new(val))
-    }
-    /// Attempts to create a new [`Real`] float.
+    /// Attempts to create a new `Real` float.
     /// # Errors
-    /// If the number is NaN.
+    /// If the value is NaN.
     pub fn try_new(val: F) -> Result<Self, NanError> {
-        // This is not a TryFrom implementation due to [this issue](https://github.com/rust-lang/rust/issues/50133).
-        Checked::try_new(val).map(Self)
+        if val.is_nan() {
+            Err(NanError)
+        } else {
+            Ok(Self(val))
+        }
     }
     /// Gets the inner value of this number.
     #[inline]
     pub fn val(self) -> F {
-        self.0.val()
-    }
-
-    #[cfg_attr(track_caller, debug_assertions)]
-    fn new_unchecked(val: F) -> Self {
-        Self(Checked::new_unchecked(val))
+        self.0
     }
 }
+
+ctor_impls!(Real<F: IsNan>, "If the number is NaN.");
 
 impl<F: IsNan> IntoInner<F> for Real<F> {
     #[inline]
@@ -82,470 +62,37 @@ impl<F: IsNan> IntoInner<F> for Real<F> {
     }
 }
 
-use crate::ToOrd;
-use std::cmp::{Eq, PartialEq};
-impl<F: IsNan + ToOrd, Rhs: IntoInner<F> + Copy> PartialEq<Rhs> for Real<F> {
-    fn eq(&self, rhs: &Rhs) -> bool {
-        self.0 == (*rhs).into_inner()
-    }
+eq_impls!(Real<F: IsNan>);
+ord_impls!(Real<F: IsNan>);
+round_impls!(Real<F: IsNan>);
+signed_impls!(Real<F: IsNan>);
+sum_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
+neg_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
+product_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
+impl<F: IsNan + crate::ops::Pow> Real<F> {
+    pown_methods!(F, NanError, "If the result is NaN.");
+    recip_methods!(F); // recip is infallible for real numbers
+    root_methods!(F, NanError, "If the result is NaN.");
 }
-impl<F: IsNan + ToOrd> Eq for Real<F> {}
-
-use std::cmp::{Ord, Ordering, PartialOrd};
-impl<F: IsNan + ToOrd> PartialOrd<F> for Real<F> {
-    fn partial_cmp(&self, rhs: &F) -> Option<Ordering> {
-        self.0.partial_cmp(rhs)
-    }
-}
-impl<F: IsNan + ToOrd> PartialOrd for Real<F> {
-    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&rhs.0)
-    }
-}
-impl<F: IsNan + ToOrd> Ord for Real<F> {
-    fn cmp(&self, rhs: &Self) -> Ordering {
-        self.0.cmp(&rhs.0)
-    }
-}
-
-use crate::ops::Round;
-impl<F: IsNan + Round> Real<F> {
-    #[must_use]
-    pub fn floor(self) -> Self {
-        Self(self.0.floor())
-    }
-    #[must_use]
-    pub fn ceil(self) -> Self {
-        Self(self.0.ceil())
-    }
-    #[must_use]
-    pub fn round(self) -> Self {
-        Self(self.0.round())
-    }
-    #[must_use]
-    pub fn trunc(self) -> Self {
-        Self(self.0.trunc())
-    }
-    #[must_use]
-    pub fn fract(self) -> Self {
-        Self(self.0.fract())
-    }
-}
-
-use crate::ops::Signed;
-impl<F: IsNan + Signed> Real<F> {
-    /// Computes the absolute value of self.
-    #[must_use]
-    pub fn abs(self) -> Self {
-        Self(self.0.abs())
-    }
-    /// Returns a number that represents the sign of self.
-    /// * `1.0` if the number is positive, `+0.0` or `INFINITY`
-    /// * `-1.0` if the number is negative, `-0.0` or `NEG_INFINITY`
-    #[must_use]
-    pub fn signum(self) -> Self {
-        Self(self.0.signum())
-    }
-    /// Returns true if self has a negative sign, including -0.0 and negative infinity.
-    #[must_use]
-    pub fn is_sign_negative(self) -> bool {
-        self.0.is_sign_negative()
-    }
-    /// Returns true if self has a positive sign, including +0.0 and positive infinity.
-    #[must_use]
-    pub fn is_sign_positive(self) -> bool {
-        self.0.is_sign_positive()
-    }
-}
-
-impl<F: IsNan + ToOrd> Real<F> {
-    #[must_use]
-    pub fn max(self, other: impl IntoInner<F>) -> Self {
-        Self(self.0.max(other.into_inner()))
-    }
-    #[must_use]
-    pub fn min(self, other: impl IntoInner<F>) -> Self {
-        Self(self.0.min(other.into_inner()))
-    }
-}
-
-use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
-impl<F: IsNan> Real<F> {
-    /// Attempts to add two numbers.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_add(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
-    where
-        F: Add<Output = F>,
-    {
-        self.0.try_add(rhs.into_inner()).map(Self)
-    }
-    /// Attempts to subtract two numbers.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_sub(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
-    where
-        F: Sub<Output = F>,
-    {
-        self.0.try_sub(rhs.into_inner()).map(Self)
-    }
-}
-impl<F: Add<Output = F> + IsNan, Rhs: IntoInner<F>> Add<Rhs> for Real<F> {
-    type Output = Self;
-    #[track_caller]
-    fn add(self, rhs: Rhs) -> Self::Output {
-        Self(self.0 + rhs.into_inner())
-    }
-}
-impl<F: AddAssign + IsNan, Rhs: IntoInner<F>> AddAssign<Rhs> for Real<F> {
-    #[track_caller]
-    fn add_assign(&mut self, rhs: Rhs) {
-        self.0 += rhs.into_inner();
-    }
-}
-impl<F: Sub<Output = F> + IsNan, Rhs: IntoInner<F>> Sub<Rhs> for Real<F> {
-    type Output = Self;
-    #[track_caller]
-    fn sub(self, rhs: Rhs) -> Self::Output {
-        Self(self.0 - rhs.into_inner())
-    }
-}
-impl<F: SubAssign + IsNan, Rhs: IntoInner<F>> SubAssign<Rhs> for Real<F> {
-    #[track_caller]
-    fn sub_assign(&mut self, rhs: Rhs) {
-        self.0 -= rhs.into_inner();
-    }
-}
-impl<F: Neg<Output = F> + IsNan> Neg for Real<F> {
-    type Output = Self;
-    fn neg(self) -> Self::Output {
-        Self(-self.0)
-    }
-}
-
-use std::ops::{Div, DivAssign, Mul, MulAssign, Rem, RemAssign};
-impl<F: IsNan> Real<F> {
-    /// Attempts to multiply two numbers.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_mul(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
-    where
-        F: Mul<Output = F>,
-    {
-        self.0.try_mul(rhs.into_inner()).map(Self)
-    }
-    /// Attempts to divide self by another number.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_div(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
-    where
-        F: Div<Output = F>,
-    {
-        self.0.try_div(rhs.into_inner()).map(Self)
-    }
-    /// Attempts to find the remainder of `self / rhs`.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_rem(self, rhs: impl IntoInner<F>) -> Result<Self, NanError>
-    where
-        F: Rem<Output = F>,
-    {
-        self.0.try_rem(rhs.into_inner()).map(Self)
-    }
-}
-impl<F: Mul<Output = F> + IsNan, Rhs: IntoInner<F>> Mul<Rhs> for Real<F> {
-    type Output = Self;
-    #[track_caller]
-    fn mul(self, rhs: Rhs) -> Self::Output {
-        Self(self.0 * rhs.into_inner())
-    }
-}
-impl<F: MulAssign + IsNan, Rhs: IntoInner<F>> MulAssign<Rhs> for Real<F> {
-    #[track_caller]
-    fn mul_assign(&mut self, rhs: Rhs) {
-        self.0 *= rhs.into_inner();
-    }
-}
-impl<F: Div<Output = F> + IsNan, Rhs: IntoInner<F>> Div<Rhs> for Real<F> {
-    type Output = Self;
-    #[track_caller]
-    fn div(self, rhs: Rhs) -> Self::Output {
-        Self(self.0 / rhs.into_inner())
-    }
-}
-impl<F: DivAssign + IsNan, Rhs: IntoInner<F>> DivAssign<Rhs> for Real<F> {
-    #[track_caller]
-    fn div_assign(&mut self, rhs: Rhs) {
-        self.0 /= rhs.into_inner();
-    }
-}
-impl<F: Rem<Output = F> + IsNan, Rhs: IntoInner<F>> Rem<Rhs> for Real<F> {
-    type Output = Self;
-    #[track_caller]
-    fn rem(self, rhs: Rhs) -> Self::Output {
-        Self(self.0 % rhs.into_inner())
-    }
-}
-impl<F: RemAssign + IsNan, Rhs: IntoInner<F>> RemAssign<Rhs> for Real<F> {
-    #[track_caller]
-    fn rem_assign(&mut self, rhs: Rhs) {
-        self.0 %= rhs.into_inner();
-    }
-}
-
-use crate::ops::Pow;
-impl<F: IsNan + Pow> Real<F> {
-    /// Attempts to raise `self` to the power `n`.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_powf(self, n: impl IntoInner<F>) -> Result<Self, NanError> {
-        self.0.try_powf(n.into_inner()).map(Self)
-    }
-    /// Attempts to raise `self` to the power `n`.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_powi(self, n: i32) -> Result<Self, NanError> {
-        self.0.try_powi(n).map(Self)
-    }
-    /// Attempts to compute the reciprocal (`1/x`) of `self`.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_recip(self) -> Result<Self, NanError> {
-        self.0.try_recip().map(Self)
-    }
-    /// Attempts to find the square root of a number.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_sqrt(self) -> Result<Self, NanError> {
-        self.0.try_sqrt().map(Self)
-    }
-    /// Attempts to find the cube root of a number.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_cbrt(self) -> Result<Self, NanError> {
-        self.0.try_cbrt().map(Self)
-    }
-    /// Attempts to calculate the length of the hypotenuse of a
-    /// right-angle triangle given legs of length `x` and `y`.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_hypot(self, other: impl IntoInner<F>) -> Result<Self, NanError> {
-        self.0.try_hypot(other.into_inner()).map(Self)
-    }
-
-    #[track_caller]
-    #[must_use]
-    pub fn powf(self, n: impl IntoInner<F>) -> Self {
-        Self(self.0.powf(n.into_inner()))
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn powi(self, n: i32) -> Self {
-        Self(self.0.powi(n))
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn recip(self) -> Self {
-        Self(self.0.recip())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn sqrt(self) -> Self {
-        Self(self.0.sqrt())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn cbrt(self) -> Self {
-        Self(self.0.cbrt())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn hypot(self, other: impl IntoInner<F>) -> Self {
-        Self(self.0.hypot(other.into_inner()))
-    }
-}
-
-use crate::ops::Exp;
-impl<F: IsNan + Exp> Real<F> {
-    /// Attempts to find `e^(self)`, the exponential function.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_exp(self) -> Result<Self, NanError> {
-        self.0.try_exp().map(Self)
-    }
-    /// Attempts to find `2^(self)`.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_exp2(self) -> Result<Self, NanError> {
-        self.0.try_exp().map(Self)
-    }
-    /// Attempts to find `e^(self) - 1` in a way that is accurate even if the number is close to zero.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_exp_m1(self) -> Result<Self, NanError> {
-        self.0.try_exp_m1().map(Self)
-    }
-    /// Attempts to find the log base `b` of self.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_log(self, b: impl IntoInner<F>) -> Result<Self, NanError> {
-        self.0.try_log(b.into_inner()).map(Self)
-    }
-    /// Attempts to find the natural log (base e) of self.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_ln(self) -> Result<Self, NanError> {
-        self.0.try_ln().map(Self)
-    }
-    /// Attempts to find the log base 2 of self.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_log2(self) -> Result<Self, NanError> {
-        self.0.try_log2().map(Self)
-    }
-    /// Attempts to find the log base 10 of self.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_log10(self) -> Result<Self, NanError> {
-        self.0.try_log10().map(Self)
-    }
-    /// Attempts to find `ln(1+n)` (natural logarithm) more accurately than if the operations were performed separately.
-    /// # Errors
-    /// If the result is NaN.
-    pub fn try_ln_1p(self) -> Result<Self, NanError> {
-        self.0.try_ln_1p().map(Self)
-    }
-
-    #[track_caller]
-    #[must_use]
-    pub fn exp(self) -> Self {
-        Self(self.0.exp())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn exp2(self) -> Self {
-        Self(self.0.exp2())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn exp_m1(self) -> Self {
-        Self(self.0.exp_m1())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn log(self, base: impl IntoInner<F>) -> Self {
-        Self(self.0.log(base.into_inner()))
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn ln(self) -> Self {
-        Self(self.0.ln())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn log2(self) -> Self {
-        Self(self.0.log2())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn log10(self) -> Self {
-        Self(self.0.log10())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn ln_1p(self) -> Self {
-        Self(self.0.ln_1p())
-    }
-}
-
-use crate::ops::Trig;
-impl<F: IsNan + Trig> Real<F> {
-    /// Attempts to compute the sine of a number (in radians).
-    /// # Errors
-    /// If the output is NaN (caused if the input is `±infinity`).
-    pub fn try_sin(self) -> Result<Self, NanError> {
-        self.0.try_sin().map(Self)
-    }
-    /// Attempts to compute the cosine of a number (in radians).
-    /// # Errors
-    /// If the output is NaN (caused if the input is `±infinity`).
-    pub fn try_cos(self) -> Result<Self, NanError> {
-        self.0.try_cos().map(Self)
-    }
-    /// Attempts to compute both the sine and cosine of a number simultaneously (in radians).
-    /// # Errors
-    /// If the output is NaN (caused if the input is `±infinity`).
-    pub fn try_sin_cos(self) -> Result<(Self, Self), NanError> {
-        let (s, c) = self.0.try_sin_cos()?;
-        Ok((Self(s), Self(c)))
-    }
-    /// Attempts to compute the tangent of a number (in radians).
-    /// # Errors
-    /// If the output is NaN (caused if the input is `±infinity`).
-    pub fn try_tan(self) -> Result<Self, NanError> {
-        self.0.try_tan().map(Self)
-    }
-    /// Attempts to compute the arcsine of a number (in radians).
-    /// # Errors
-    /// If the output is NaN (caused if the magnitude of the input exceeds 1).
-    pub fn try_asin(self) -> Result<Self, NanError> {
-        self.0.try_asin().map(Self)
-    }
-    /// Attempts to compute the arccosine of a number (in radians).
-    /// # Errors
-    /// If the output is NaN (caused if the magnitude of the input exceeds 1).
-    pub fn try_acos(self) -> Result<Self, NanError> {
-        self.0.try_acos().map(Self)
-    }
-    /// Attempts to ompute the four quadrant arctangent of self (y) and other (x) in radians.
-    /// # Errors
-    /// If the output is NaN.
-    pub fn try_atan2(self, other: impl IntoInner<F>) -> Result<Self, NanError> {
-        self.0.try_atan2(other.into_inner()).map(Self)
-    }
-
-    #[track_caller]
-    #[must_use]
-    pub fn sin(self) -> Self {
-        Self(self.0.sin())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn cos(self) -> Self {
-        Self(self.0.cos())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn sin_cos(self) -> (Self, Self) {
-        let (s, c) = self.0.sin_cos();
-        (Self(s), Self(c))
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn tan(self) -> Self {
-        Self(self.0.tan())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn asin(self) -> Self {
-        Self(self.0.asin())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn acos(self) -> Self {
-        Self(self.0.acos())
-    }
-    #[cfg_attr(track_caller, debug_assertions)]
-    #[must_use]
-    pub fn atan(self) -> Self {
-        // arctangent always succeeds for real values
-        Self::new_unchecked(self.val().atan())
-    }
-    #[track_caller]
-    #[must_use]
-    pub fn atan2(self, other: impl IntoInner<F>) -> Self {
-        Self(self.0.atan2(other.into_inner()))
-    }
+exp_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
+impl<F: IsNan + crate::ops::Trig> Real<F> {
+    sin_cos_methods!(
+        F,
+        NanError,
+        "If the output is NaN (caused if the input is `±infinity`)."
+    );
+    tan_methods!(
+        F,
+        NanError,
+        "If the result is NaN (caused if the input is `±infinity`)."
+    );
+    asin_acos_methods!(
+        F,
+        NanError,
+        "If the output is NaN (caused if the magnitude of the input exceeds 1)."
+    );
+    atan_methods!(F); // atan always succeeds for real inputs.
+    atan2_methods!(F, NanError, "If the output is NaN.");
 }
 
 #[cfg(test)]
@@ -629,6 +176,7 @@ mod tests {
         assert_eq!(real!(1000.0f32).powf(1000.0), real!(f32::INFINITY));
         assert_eq!(real!(4.0f32).powf(3.5), real!(128.0));
         assert_eq!(real!(2.0f32).powi(8), real!(256.0));
+        assert_eq!(real!(2.0f32).recip(), real!(0.5));
         assert_eq!(real!(4.0f32).sqrt(), real!(2.0));
         assert_eq!(real!(27.0f32).cbrt(), real!(3.0));
     }
