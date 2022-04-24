@@ -1,11 +1,11 @@
 //! # Intro
 //! This crate is for dealing checked floating point numbers.
-//! It exports two types: [`Real`] and [`Finite`]. `Real` is checked at runtime
+//! It exports three types: [`Real`], [`Finite`], and [`NonNeg`]. `Real` is checked at runtime
 //! to ensure that it is never `NaN`, while `Finite` adds the additional constraint
-//! that it can never be infinite.  
+//! that it can never be infinite, and `NonNeg` requires that it have a postive sign.  
 //!
 //! For the sake of brevity, we will only discuss `Real`, but understand that
-//! everything applies to `Finite` as well.  
+//! everything applies to `Finite` and `NonNeg` as well.  
 //!
 //! # Checking behavior
 //! A `NaN`-check is inserted in every single operation and method. If a `NaN`
@@ -18,7 +18,7 @@
 //!
 //! # Fallible API
 //! The types in this crate also support fallible APIs for any operation that would
-//! otherwise panic. These are the `try_*` methods defined on `Real` and `Finite`,
+//! otherwise panic. These are the `try_*` methods defined on `Real`, `Finite`, etc.,
 //! and they will perform `NaN` checks whether or not debug mode is enabled.
 //!
 //! # Comparison with similar crates
