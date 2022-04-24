@@ -1,6 +1,6 @@
 [package]
 name = "real_float"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 
 description = "Floating point types that check for correctness and implement total ordering"
@@ -15,4 +15,5 @@ categories = ["mathematics"]
 num-traits = { version = "0.2", optional = true }
 
 [features]
+num = ["dep:num-traits"]
 strict = []
