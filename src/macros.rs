@@ -326,7 +326,7 @@ macro_rules! product_impls {
     };
 }
 
-macro_rules! pown_methods {
+macro_rules! pow_methods {
     ($f: ident, $err: ty, $msg: literal) => {
         /// Attempts to raise `self` to the power `n`.
         /// # Errors
@@ -391,8 +391,8 @@ macro_rules! recip_methods {
         }
     };
 }
-macro_rules! root_methods {
-    ($f: ident, $err: ty, $msg: literal) => {
+macro_rules! sqrt_methods {
+    ($f:ident, $err:ty, $msg:literal) => {
         /// Attempts to find the square root of a number.
         /// # Errors
         #[doc = $msg]
@@ -400,16 +400,6 @@ macro_rules! root_methods {
             let val = self.val().sqrt();
             Self::try_new(val)
         }
-        /// Attempts to calculate the length of the hypotenuse of a right-angle triangle given legs of length `x` and `y`.
-        ///
-        /// Equivalent to `sqrt(x^2 + y^2)`.
-        /// # Errors
-        #[doc = $msg]
-        pub fn try_hypot(self, other: impl $crate::IntoInner<F>) -> Result<Self, $err> {
-            let val = self.val().hypot(other.into_inner());
-            Self::try_new(val)
-        }
-
         /// Computes the square root of a number.
         /// # Panics
         #[doc = $msg]
@@ -419,12 +409,37 @@ macro_rules! root_methods {
             let val = self.val().sqrt();
             Self::new(val)
         }
+    };
+    ($f:ident) => {
+        /// Computes the square root of a number.
+        #[must_use]
+        pub fn sqrt(self) -> Self {
+            let val = self.val().sqrt();
+            Self::new_unchecked(val)
+        }
+    };
+}
+macro_rules! cbrt_methods {
+    ($f:ident) => {
         /// Computes the cube root of a number.
         #[must_use]
         pub fn cbrt(self) -> Self {
             // cube root is defined for any real value
             let val = self.val().cbrt();
             Self::new_unchecked(val)
+        }
+    };
+}
+macro_rules! hypot_methods {
+    ($f:ident, $err: ty, $msg: literal) => {
+        /// Attempts to calculate the length of the hypotenuse of a right-angle triangle given legs of length `x` and `y`.
+        ///
+        /// Equivalent to `sqrt(x^2 + y^2)`.
+        /// # Errors
+        #[doc = $msg]
+        pub fn try_hypot(self, other: impl $crate::IntoInner<F>) -> Result<Self, $err> {
+            let val = self.val().hypot(other.into_inner());
+            Self::try_new(val)
         }
         /// Calculates the length of the hypotenuse of a right-angle triangle given legs of length `x` and `y`.
         /// # Panics

@@ -83,6 +83,9 @@ pub use real::{IsNan, NanError, Real};
 mod finite;
 pub use finite::{Finite, InfiniteError, IsFinite};
 
+mod non_neg;
+pub use non_neg::{IsNegative, NegativeError, NonNeg};
+
 #[cfg(feature = "num-traits")]
 pub mod num;
 

@@ -82,9 +82,11 @@ product_impls!(
     "If the result is non-finite."
 );
 impl<F: IsFinite + crate::ops::Pow> Finite<F> {
-    pown_methods!(F, InfiniteError, "If the result is non-finite.");
+    pow_methods!(F, InfiniteError, "If the result is non-finite.");
     recip_methods!(F, InfiniteError, "If the result is non-finite.");
-    root_methods!(F, InfiniteError, "If the result is non-finite.");
+    sqrt_methods!(F, InfiniteError, "If the result is non-finite.");
+    cbrt_methods!(F);
+    hypot_methods!(F, InfiniteError, "If the result is non-finite.");
 }
 exp_impls!(
     Finite<F: IsFinite>,

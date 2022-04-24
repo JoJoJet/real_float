@@ -70,9 +70,11 @@ sum_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
 neg_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
 product_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
 impl<F: IsNan + crate::ops::Pow> Real<F> {
-    pown_methods!(F, NanError, "If the result is NaN.");
+    pow_methods!(F, NanError, "If the result is NaN.");
     recip_methods!(F); // recip is infallible for real numbers
-    root_methods!(F, NanError, "If the result is NaN.");
+    sqrt_methods!(F, NanError, "If the result is NaN.");
+    cbrt_methods!(F);
+    hypot_methods!(F, NanError, "If the result is NaN.");
 }
 exp_impls!(Real<F: IsNan>, NanError, "If the result is NaN.");
 impl<F: IsNan + crate::ops::Trig> Real<F> {
