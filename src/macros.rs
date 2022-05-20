@@ -10,15 +10,9 @@ macro_rules! ctor_impls {
                 if $crate::STRICT {
                     $crate::unwrap_display(Self::try_new(val))
                 } else {
-                    Self::new_unchecked(val)
+                    // SAFETY: lol
+                    unsafe { Self::unchecked(val) }
                 }
-            }
-            #[cfg_attr(track_caller, debug_assertions)]
-            fn new_unchecked(val: F) -> Self {
-                // panic anyway in debug mode b/c why not.
-                #[cfg(debug_assertions)]
-                let _ = crate::unwrap_display(Self::try_new(val));
-                Self(val)
             }
         }
     };
@@ -66,7 +60,7 @@ macro_rules! ord_impls {
             pub fn max(self, other: impl IntoInner<F>) -> Self {
                 let other = other.into_inner();
                 match self.partial_cmp(&other) {
-                    Some(::core::cmp::Ordering::Greater) => Self::new_unchecked(other),
+                    Some(::core::cmp::Ordering::Greater) => unsafe { Self::unchecked(other) },
                     _ => self,
                 }
             }
@@ -75,7 +69,7 @@ macro_rules! ord_impls {
             pub fn min(self, other: impl IntoInner<F>) -> Self {
                 let other = other.into_inner();
                 match self.partial_cmp(&other) {
-                    Some(::core::cmp::Ordering::Less) => Self::new_unchecked(other),
+                    Some(::core::cmp::Ordering::Less) => unsafe { Self::unchecked(other) },
                     _ => self,
                 }
             }
@@ -89,27 +83,27 @@ macro_rules! round_impls {
             /// Rounds this floating point number to the previous whole number.
             #[must_use]
             pub fn floor(self) -> Self {
-                Self::new_unchecked(self.val().floor())
+                unsafe { Self::unchecked(self.val().floor()) }
             }
             /// Rounds this floating point number to the next whole number.
             #[must_use]
             pub fn ceil(self) -> Self {
-                Self::new_unchecked(self.val().ceil())
+                unsafe { Self::unchecked(self.val().ceil()) }
             }
             /// Rounds this floating point number to the nearest whole number.
             #[must_use]
             pub fn round(self) -> Self {
-                Self::new_unchecked(self.val().round())
+                unsafe { Self::unchecked(self.val().round()) }
             }
             /// Drops the fractional part of this floating point number.
             #[must_use]
             pub fn trunc(self) -> Self {
-                Self::new_unchecked(self.val().trunc())
+                unsafe { Self::unchecked(self.val().trunc()) }
             }
             /// Returns the fractional part of this floating point number.
             #[must_use]
             pub fn fract(self) -> Self {
-                Self::new_unchecked(self.val().fract())
+                unsafe { Self::unchecked(self.val().fract()) }
             }
         }
     };
@@ -121,14 +115,14 @@ macro_rules! signed_impls {
             /// Computes the absolute value of self.
             #[must_use]
             pub fn abs(self) -> Self {
-                Self::new_unchecked(self.val().abs())
+                unsafe { Self::unchecked(self.val().abs()) }
             }
             /// Returns a number that represents the sign of self.
             /// * `1.0` if the number is positive, `+0.0` or `INFINITY`
             /// * `-1.0` if the number is negative, `-0.0` or `NEG_INFINITY`
             #[must_use]
             pub fn signum(self) -> Self {
-                Self::new_unchecked(self.val().signum())
+                unsafe { Self::unchecked(self.val().signum()) }
             }
             /// Returns true if self has a negative sign, including -0.0 and negative infinity.
             #[must_use]
@@ -387,7 +381,7 @@ macro_rules! recip_methods {
         #[must_use]
         pub fn recip(self) -> Self {
             // this macro arm assumes that `recip` always succeeds.
-            Self::new_unchecked(self.val().recip())
+            unsafe { Self::unchecked(self.val().recip()) }
         }
     };
 }
@@ -415,7 +409,7 @@ macro_rules! sqrt_methods {
         #[must_use]
         pub fn sqrt(self) -> Self {
             let val = self.val().sqrt();
-            Self::new_unchecked(val)
+            unsafe { Self::unchecked(val) }
         }
     };
 }
@@ -426,7 +420,7 @@ macro_rules! cbrt_methods {
         pub fn cbrt(self) -> Self {
             // cube root is defined for any real value
             let val = self.val().cbrt();
-            Self::new_unchecked(val)
+            unsafe { Self::unchecked(val) }
         }
     };
 }
@@ -657,18 +651,18 @@ macro_rules! sin_cos_methods {
         #[must_use]
         pub fn sin(self) -> Self {
             // this macro arm assumes that sin/cos always succeed
-            Self::new_unchecked(self.val().sin())
+            unsafe { Self::unchecked(self.val().sin()) }
         }
         /// Computes the cosine of a number.
         #[must_use]
         pub fn cos(self) -> Self {
-            Self::new_unchecked(self.val().cos())
+            unsafe { Self::unchecked(self.val().cos()) }
         }
         /// Computes the sine and cosine of a number simultaneously.
         #[must_use]
         pub fn sin_cos(self) -> (Self, Self) {
             let (s, c) = self.val().sin_cos();
-            (Self::new_unchecked(s), Self::new_unchecked(c))
+            unsafe { (Self::unchecked(s), Self::unchecked(c)) }
         }
     };
 }
@@ -753,7 +747,7 @@ macro_rules! atan_methods {
         #[must_use]
         pub fn atan(self) -> Self {
             // this macro arm assuems tangent always succeeds
-            Self::new_unchecked(self.val().atan())
+            unsafe { Self::unchecked(self.val().atan()) }
         }
     };
 }

@@ -14,23 +14,6 @@ pub trait IsNan: Sized + Copy {
     fn is_nan(self) -> bool;
 }
 
-/// Constructor for [`Real`] that never checks the value, and can be used in a const context.
-/// # Safety
-/// Ensure that the value can never be `NaN`.
-#[macro_export]
-macro_rules! real_unchecked {
-    ($f: expr) => {{
-        union Transmute<F: $crate::IsNan> {
-            inner: F,
-            real: $crate::Real<F>,
-        }
-
-        // SAFETY: `Real` is `repr(transparent)`.
-        let val = Transmute { inner: $f };
-        val.real
-    }};
-}
-
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct Real<F: IsNan>(F);
@@ -46,9 +29,21 @@ impl<F: IsNan> Real<F> {
             Ok(Self(val))
         }
     }
+    /// Const-safe constructor for `Real` that never checks the value.
+    /// # Safety
+    /// Ensure that the value can never be `NaN`.
+    pub const unsafe fn unchecked(val: F) -> Self {
+        union Transmute<F: IsNan> {
+            val: F,
+            real: Real<F>,
+        }
+
+        // SAFETY: `Real` is `repr(transparent)`.
+        Transmute { val }.real
+    }
     /// Gets the inner value of this number.
     #[inline]
-    pub fn val(self) -> F {
+    pub const fn val(self) -> F {
         self.0
     }
 }
@@ -120,7 +115,7 @@ mod tests {
 
     #[test]
     fn unchecked() {
-        let real = unsafe { real_unchecked!(f32::NAN) };
+        let real = unsafe { Real::unchecked(f32::NAN) };
         assert!(real.val().is_nan());
     }
 

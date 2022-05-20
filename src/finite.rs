@@ -14,23 +14,6 @@ pub trait IsFinite: Sized + Copy {
     fn is_finite(self) -> bool;
 }
 
-/// Constructor for [`Finite`] that never checks the value, and can be used in a const context.
-/// # Safety
-/// Ensure that the value can never be `NaN` or infinite.
-#[macro_export]
-macro_rules! finite_unchecked {
-    ($f: expr) => {{
-        union Transmute<F: $crate::IsFinite> {
-            inner: F,
-            finite: $crate::Finite<F>,
-        }
-
-        // SAFETY: `Finite` is `repr(transparent)`.
-        let val = Transmute { inner: $f };
-        val.finite
-    }};
-}
-
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct Finite<F: IsFinite>(F);
@@ -46,9 +29,21 @@ impl<F: IsFinite> Finite<F> {
             Err(InfiniteError)
         }
     }
+    /// Const-safe constructor for `Finite` that never checks the value.
+    /// # Safety
+    /// Ensure that the value can never be infinity or `NaN`.
+    pub const unsafe fn unchecked(val: F) -> Self {
+        union Transmute<F: IsFinite> {
+            val: F,
+            finite: Finite<F>,
+        }
+
+        // SAFETY: `Real` is `repr(transparent)`.
+        Transmute { val }.finite
+    }
     /// Gets the inner value of this number.
     #[inline]
-    pub fn val(self) -> F {
+    pub const fn val(self) -> F {
         self.0
     }
 }
@@ -138,7 +133,7 @@ mod tests {
 
     #[test]
     fn unchecked() {
-        let finite = unsafe { finite_unchecked!(f32::INFINITY) };
+        let finite = unsafe { Finite::unchecked(f32::INFINITY) };
         assert!(finite.val().is_infinite());
     }
 
